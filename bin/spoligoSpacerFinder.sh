@@ -469,12 +469,13 @@ spbinarylast=`echo $mybinaries | awk '{print substr($1,43,1)}'`
 exspbinary=`echo $myextbinaries | awk '{print substr($1,1,93)}'`
 exspbinarylast=`echo $myextbinaries | awk '{print substr($1,94,1)}'`
 
-exspoligooctal=`echo "ibase=2;obase=8; $spbinary" | bc`
-WGExSpoligo=`echo "$exspoligooctal$spbinarylast"`
-echo "$WGExSpoligo">$n.octalcode.txt
-spoligooctal=`echo "ibase=2;obase=8; $exspbinary" | bc`
+spoligooctal=`echo "ibase=2;obase=8; $spbinary" | bc`
 WGSpoligo=`echo "$spoligooctal$spbinarylast"`
-echo "$WGSpoligo">>$n.octalcode.txt
+echo "$WGSpoligo">$n.octalcode.txt
+
+exspoligooctal=`echo "ibase=2;obase=8; $exspbinary" | bc`
+WGExSpoligo=`echo "$exspoligooctal$exspbinarylast"`
+echo "$WGExSpoligo">>$n.octalcode.txt
 #echo "Octals: $exspoligooctal, $spoligooctal"
 
 #for i in $mybinaries; do 
