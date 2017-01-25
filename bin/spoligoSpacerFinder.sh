@@ -530,7 +530,7 @@ printf "%s\t%s\n" "$n" "$WGSpoligo" >> "/bioinfo11/TStuber/Results/mycobacterium
 # Add infor to spoligoCheck_all.txt
 echo "<----- $n ----->" >> /scratch/report/spoligoCheck_all.txt
 echo "WGSpoligo:	$WGSpoligo" >> /scratch/report/spoligoCheck_all.txt
-echo "WGExtSpoligo:	$exspoligooctal" >> /scratch/report/spoligoCheck_all.txt
+echo "WGExtSpoligo:	$WGExSpoligo" >> /scratch/report/spoligoCheck_all.txt
 
 # move back a directory to main sample folder
 cd ..
