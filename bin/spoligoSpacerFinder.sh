@@ -444,7 +444,7 @@ for i in {1..94}; do
 	if [ $( grep -wc $sp NUM) -gt 0 ]; then
 	spacer="$spacer	$cursp"
 	fi
-	echo "Extended $extspacer, Original $spacer"
+	#echo "Extended $extspacer, Original $spacer"
 	rm searchpattern
 	done
 
@@ -461,11 +461,21 @@ echo "$spacer">>$n.spacer.txt
 mybinaries=`echo $spacer | awk '{for(i=1;i<=NF;i++) if ($i >= 1) print 1; else print 0}' | tr -cd "[:print:]"`
 #`echo $spacer | awk 'NR==2 {for(i=1;i<=NF;i++) if ($i >= 5) print 1; else print 0}' | tr -cd "[:print:]" | fold -w3`
 myextbinaries=`echo $extspacer | awk '{for(i=1;i<=NF;i++) if ($i >= 1) print 1; else print 0}' | tr -cd "[:print:]"`
-echo "Binaries: $mybinaries, $myextbinaries"
+#echo "Binaries: $mybinaries, $myextbinaries"
 
-exspoligooctal=`echo "ibase=2;obase=8; $mybinaries" | bc`>$n.octalcode.txt
-spoligooctal=`echo "ibase=2;obase=8; $myextbinaries" | bc`>>$n.octalcode.txt
-echo "Octals: $exspoligooctal, $spoligooctal"
+spbinary=`echo $mybinaries | awk '{print substr($1,1,42)}'`
+spbinarylast=`echo $mybinaries | awk '{print substr($1,43,1)}'`
+
+exspbinary=`echo $myextbinaries | awk '{print substr($1,1,93)}'`
+exspbinarylast=`echo $myextbinaries | awk '{print substr($1,94,1)}'`
+
+exspoligooctal=`echo "ibase=2;obase=8; $spbinary" | bc`
+WGExSpoligo=`echo "$exspoligooctal$spbinarylast"`
+echo "$WGExSpoligo">$n.octalcode.txt
+spoligooctal=`echo "ibase=2;obase=8; $exspbinary" | bc`
+WGSpoligo=`echo "$spoligooctal$spbinarylast"`
+echo "$WGSpoligo">>$n.octalcode.txt
+#echo "Octals: $exspoligooctal, $spoligooctal"
 
 #for i in $mybinaries; do 
 #if [ $i == 000 ]
@@ -503,13 +513,14 @@ echo "Octals: $exspoligooctal, $spoligooctal"
 #fi
 #done
 
-tr -d '\n' < $n.octalcode.txt | awk -v x="$n" 'BEGIN{OFS="\t"}{print x, $0}' > spoligo.txt
-WGSpoligo=`cat $n.octalcode.txt | tr -cd "[:print:]"`
-
+#tr -d '\n' < $n.octalcode.txt | awk -v x="$n" 'BEGIN{OFS="\t"}{print x, $0}' > spoligo.txt
+#WGSpoligo=`cat $n.octalcode.txt | tr -cd "[:print:]"`
+echo "$n  $WGSpoligo">spoligo.txt
+echo "$WGExSpoligo">>spoligo.txt
 # Add infor to spoligoCheck.txt
 echo "<----- $n ----->" >> /scratch/report/spoligoCheck.txt
 echo "WGSpoligo:	$WGSpoligo" >> /scratch/report/spoligoCheck.txt
-echo "WGExtSpoligo:	$exspoligooctal" >> /scratch/report/spoligoCheck.txt
+echo "WGExSpoligo:	$WGExSpoligo" >> /scratch/report/spoligoCheck.txt
 
 #Make FileMaker file
 dateFile=`date "+%Y%m%d"`
