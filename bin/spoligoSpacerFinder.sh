@@ -453,10 +453,10 @@ for i in {1..94}; do
 rm NUM
 rm seq
 
-echo "spacer01	spacer02	spacer03	spacer04	spacer05	spacer06	spacer07	spacer08	spacer09	spacer10	spacer11	spacer12	spacer13	spacer14	spacer15	spacer16	spacer17	spacer18	spacer19	spacer20	spacer21	spacer22	spacer23	spacer24	spacer25	spacer26	spacer27	spacer28	spacer29	spacer30	spacer31	spacer32	spacer33	spacer34	spacer35	spacer36	spacer37	spacer38	spacer39	spacer40	spacer41	spacer42	spacer43	spacer44	spacer 45	spacer46	spacer47	spacer48	spacer49	spacer50	spacer51	spacer52	spacer53	spacer54	spacer55	spacer56	spacer57	spacer58	spacer59	spacer60	spacer61	spacer62	spacer63	spacer64	spacer65	spacer66	spacer67 spacer68	spacer69	spacer70	spacer71	spacer72	spacer73	spacer74	spacer75	spacer76	spacer77	spacer78	spacer79	spacer80	spacer 81	spacer 82	spacer 83	spacer84	spacer85	spacer86	spacer87	spacer88	spacer89	spacer90	spacer91	spacer92	spacer93	spacer94" >> $n.spacer.txt
-echo "$extspacer">$n.spacer.txt
+echo "spacer01	spacer02	spacer03	spacer04	spacer05	spacer06	spacer07	spacer08	spacer09	spacer10	spacer11	spacer12	spacer13	spacer14	spacer15	spacer16	spacer17	spacer18	spacer19	spacer20	spacer21	spacer22	spacer23	spacer24	spacer25	spacer26	spacer27	spacer28	spacer29	spacer30	spacer31	spacer32	spacer33	spacer34	spacer35	spacer36	spacer37	spacer38	spacer39	spacer40	spacer41	spacer42	spacer43	spacer44	spacer 45	spacer46	spacer47	spacer48	spacer49	spacer50	spacer51	spacer52	spacer53	spacer54	spacer55	spacer56	spacer57	spacer58	spacer59	spacer60	spacer61	spacer62	spacer63	spacer64	spacer65	spacer66	spacer67 spacer68	spacer69	spacer70	spacer71	spacer72	spacer73	spacer74	spacer75	spacer76	spacer77	spacer78	spacer79	spacer80	spacer 81	spacer 82	spacer 83	spacer84	spacer85	spacer86	spacer87	spacer88	spacer89	spacer90	spacer91	spacer92	spacer93	spacer94" > $n.spacer.txt
+echo "$extspacer" >> $n.spacer.txt
 echo "spacer01	spacer02	spacer03	spacer04	spacer05	spacer06	spacer07	spacer08	spacer09	spacer10	spacer11	spacer12	spacer13	spacer14	spacer15	spacer16	spacer17	spacer18	spacer19	spacer20	spacer21	spacer22	spacer23	spacer24	spacer25	spacer26	spacer27	spacer28	spacer29	spacer30	spacer31	spacer32	spacer33	spacer34	spacer35	spacer36	spacer37	spacer38	spacer39	spacer40	spacer41	spacer42	spacer43" >> $n.spacer.txt
-echo "$spacer">>$n.spacer.txt
+echo "$spacer" >> $n.spacer.txt
 
 mybinaries=`echo $spacer | awk '{for(i=1;i<=NF;i++) if ($i >= 1) print 1; else print 0}' | tr -cd "[:print:]"`
 #`echo $spacer | awk 'NR==2 {for(i=1;i<=NF;i++) if ($i >= 5) print 1; else print 0}' | tr -cd "[:print:]" | fold -w3`
