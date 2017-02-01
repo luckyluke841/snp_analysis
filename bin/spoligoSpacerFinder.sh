@@ -50,10 +50,11 @@ echo "${patt[*]}" | tr " " "\n" >> searchpattern
 
 ##############
 #Spacers- Original No./Extended No.
+#Original sequences are 25bp probe, but new sequences had shorter probes.  Used additional spacer sequence to extend to 25 bp
 
 #Spacer -/01
-forward1="CAACCCGGAATTCTTGC"
-reverse1="GCAAGAATTCCGGGTTG"
+forward1="GCACTGCAACCCGGAATTCTTGCAC"
+reverse1="GTGCAAGAATTCCGGGTTGCAGTGC"
 
 #Spacer01/02
 forward2="TGATCCAGAGCCGGCGACCCTCTAT"
@@ -68,32 +69,32 @@ forward4="CCGTGCTTCCAGTGATCGCCTTCTA"
 reverse4="TAGAAGGCGATCACTGGAAGCACGG"
 
 #Spacer -/5
-forward5="CAGGCGTGGCTAGG"
-reverse5="CCTAGCCACGCCTG"
+forward5="ATGGCACGGCAGGCGTGGCTAGGGG"
+reverse5="CCCCTAGCCACGCCTGCCGTGCCAT"
 
 #Spacer -/6
-forward6="GTCGCCGTAAGTGCC"
-reverse6="GGCACTTACGGCGAC"
+forward6="ATGTGCGCCGTCGCCGTAAGTGCCC"
+reverse6="GGGCACTTACGGCGACGGCGCACAT"
 
 #Spacer -/7
-forward7="GTTGACCACGAATTTTCAGA"
-reverse7="TCTGAAAATTCGTGGTCAAC"
+forward7="AATTCGTTGACCACGAATTTTCAGA"
+reverse7="TCTGAAAATTCGTGGTCAACGAATT"
 
 #Spacer -/8
-forward8="GCTGGCGCGCATCAT"
-reverse8="ATGATGCGCGCCAGC"
+forward8="ACCGCTGGCGCGCATCATTCATCGA"
+reverse8="TCGATGAATGATGCGCGCCAGCGGT"
 
 #Spacer -/9
-forward9="CCATATCGGGGACGG"
-reverse9="CCGTCCCCGATATGG"
+forward9="CCATATCGGGGACGGCGACGCTGCG"
+reverse9="CGCAGCGTCGCCGTCCCCGATATGG"
 
 #Spacer -/10
-forward10="GCGTCGTGCCATCAG"
-reverse10="CTGATGGCACGACGC"
+forward10="TACACCACGCGTCGTGCCATCAGTC"
+reverse10="GACTGATGGCACGACGCGTGGTGTA"
 
 #Spacer -/11
-forward11="CCGTGCACATGCCGT"
-reverse11="ACGGCATGTGCACGG"
+forward11="CCGTGCACATGCCGTGGCTCAGGGG"
+reverse11="CCCCTGAGCCACGGCATGTGCACGG"
 
 #Spacer04/12
 forward12="ACGTCATACGCCGACCAATCATCAG"
@@ -112,12 +113,12 @@ forward15="GAGGAGAGCGAGTACTCGGGGCTGC"
 reverse15="GCAGCCCCGAGTACTCGCTCTCCTC"
 
 #Spacer -/16
-forward16="ACGTTAGGGCATGCAG"
-reverse16="CTGCATGCCCTAACGT"
+forward16="ACGACGTTAGGGCATGCAGCATGCC"
+reverse16="GGCATGCTGCATGCCCTAACGTCGT"
 
 #Spacer -/17
-forward17="TCTTGAGCAACGCCATCA"
-reverse17="TGATGGCGTTGCTCAAGA"
+forward17="TGCTCTTGAGCAACGCCATCATCCGG"
+reverse17="CCGGATGATGGCGTTGCTCAAGAGCA"
 
 #Spacer08/18
 forward18="CGTGAAACCGCCCCCAGCCTCGCCG"
@@ -228,8 +229,8 @@ forward44="AAGTCACCTCGCCCACACCGTCGAA"
 reverse44="TTCGACGGTGTGGGCGAGGTGACTT"
 
 #Spacer -/45
-forward45="AAGTTGGCGCTGGGG"
-reverse45="CCCCAGCGCCAACTT"
+forward45="AAGTTGGCGCTGGGGTCTGAGTCAA"
+reverse45="TTGACTCAGACCCCAGCGCCAACTT"
 
 #Spacer35/46
 forward46="TCCGTACGCTCGAAACGCTTCCAAC"
@@ -240,16 +241,16 @@ forward47="CGAAATCCAGCACCACATCCGCAGC"
 reverse47="GCTGCGGATGTGGTGCTGGATTTCG"
 
 #Spacer -/48
-forward48="AACCGTCCCACCTGG"
-reverse48="CCAGGTGGGACGGTT"
+forward48="GCGAGGAACCGTCCCACCTGGGCCT"
+reverse48="AGGCCCAGGTGGGACGGTTCCTCGC"
 
 #Spacer -/49
-forward49="AACACTTTTTTTGAGCGTGG"
-reverse49="CCACGCTCAAAAAAAGTGTT"
+forward49="TCAATAACACTTTTTTTGAGCGTGG"
+reverse49="CCACGCTCAAAAAAAGTGTTATTGA"
 
 #Spacer -/50
-forward50="CGGAAACGCAGCACC"
-reverse50="GGTGCTGCGTTTCCG"
+forward50="ACGGAAACGCAGCACCAGCCTGACAAT"
+reverse50="ATTGTCAGGCTGGTGCTGCGTTTCCGT"
 
 #Spacer37/51
 forward51="CGCGAACTCGTCCACAGTCCCCCTT"
@@ -264,36 +265,36 @@ forward53="GACGATGGCCAGTAAATCGGCGTGG"
 reverse53="CCACGCCGATTTACTGGCCATCGTC"
 
 #Spacer -/54
-forward54="CGATCATGAGAGTTGCG"
-reverse54="CGCAACTCTCATGATCG"
+forward54="GCATCGATCATGAGAGTTGCGTTGAT"
+reverse54="ATCAACGCAACTCTCATGATCGATGC"
 
 #Spacer -/55
-forward55="TTTTCGCTGTTGTGGTTCT"
-reverse55="AGAACCACAACAGCGAAAA"
+forward55="GATTTTCGCTGTTGTGGTTCTCATT"
+reverse55="AATGAGAACCACAACAGCGAAAATC"
 
 #Spacer -/56
-forward56="AGCACCTCCCTTGACAA"
-reverse56="TTGTCAAGGGAGGTGCT"
+forward56="GCACACCAGCACCTCCCTTGACAAT"
+reverse56="ATTGTCAAGGGAGGTGCTGGTGTGC"
 
 #Spacer -/57
-forward57="TGCTGACTTCGCCTGTA"
-reverse57="TACAGGCGAAGTCAGCA"
+forward57="CCTAAGGGTGCTGACTTCGCCTGTA"
+reverse57="TACAGGCGAAGTCAGCACCCTTAGG"
 
 #Spacer -/58
-forward58="CGAGCAGCGGCATA"
-reverse58="TATGCCGCTGCTCG"
+forward58="CCGACGACCGAGCAGCGGCATAGA"
+reverse58="TCTATGCCGCTGCTCGGTCGTCGG"
 
 #Spacer -/59
-forward59="GCATCCACTCGTCGC"
-reverse59="GCGACGAGTGGATGC"
+forward59="TTGCATCCACTCGTCGCCGACACGG"
+reverse59="CCGTGTCGGCGACGAGTGGATGCAA"
 
 #Spacer -/60
-forward60="TGGGTAATTGCGTCACGG"
-reverse60="CCGTGACGCAATTACCCA"
+forward60="TGGGTAATTGCGTCACGGCGCGCCTG"
+reverse60="CAGGCGCGCCGTGACGCAATTACCCA"
 
 #Spacer -/61
-forward61="ACCATCCGACGCAGG"
-reverse61="CCTGCGTCGGATGGT"
+forward61="ACCATCCGACGCAGGCACCGAAGTC"
+reverse61="GACTTCGGTGCCTGCGTCGGATGGT"
 
 #Spacer40/62
 forward62="CGCCATCTGTGCCTCATACAGGTCC"
@@ -312,120 +313,120 @@ forward65="CGCAGAATCGCACCGGGTGCGGGAG"
 reverse65="CTCCCGCACCCGGTGCGATTCTGCG"
 
 #Spacer -/66
-forward66="CCACGCTACTGCTCC"
-reverse66="GGAGCAGTAGCGTGG"
+forward66="CACCACAGCCACGCTACTGCTCCAT"
+reverse66="ATGGAGCAGTAGCGTGGCTGTGGTG"
 
 #Spacer -/67
-forward67="CACCGCCGATGACAG"
-reverse67="CTGTCATCGGCGGTG"
+forward67="ACACCGCCGATGACAGCTATGTCCG"
+reverse67="CGGACATAGCTGTCATCGGCGGTGT"
 
 #Spacer -/68
-forward68="GTGTTTCGGCCGTGC"
-reverse68="GCACGGCCGAAACAC"
+forward68="CGCGCGGTGTTTCGGCCGTGCCCGA"
+reverse68="TCGGGCACGGCCGAAACACCGCGCG"
 
 #Spacer -/69
-forward69="GTTGCATTCGTCGACTG"
-reverse69="CAGTCGACGAATGCAAC"
+forward69="GTTGCATTCGTCGACTGCGTGGTAT"
+reverse69="ATACCACGCAGTCGACGAATGCAAC"
 
 #Spacer -/70
-forward70="GGCGGCGCCGAGAA"
-reverse70="TTCTCGGCGCCGCC"
+forward70="GTAGCGGCCCCGGCGGCGCCGAGAA"
+reverse70="TTCTCGGCGCCGCCGGGGCCGCTAC"
 
 #Spacer -/71
-forward71="TTCCATGACTTGACGCC"
-reverse71="GGCGTCAAGTCATGGAA"
+forward71="TGGTGATCTTCCATGACTTGACGCC"
+reverse71="GGCGTCAAGTCATGGAAGATCACCA"
 
 #Spacer -/72
-forward72="CGATGCGGCCACTAG"
-reverse72="CTAGTGGCCGCATCG"
+forward72="GCGGTGCTCGATGCGGCCACTAGGC"
+reverse72="GCCTAGTGGCCGCATCGAGCACCGC"
 
 #Spacer -/73
-forward73="GCTGACCCCATGGATG"
-reverse73="CATCCATGGGGTCAGC"
+forward73="TCGGTGCTGACCCCATGGATGCGAA"
+reverse73="TTCGCATCCATGGGGTCAGCACCGA"
 
 #Spacer -/74
-forward74="CAACAAGGTCTACGCGT"
-reverse74="ACGCGTAGACCTTGTTG"
+forward74="CAACAAGGTCTACGCGTCGAGGTCC"
+reverse74="GGACCTCGACGCGTAGACCTTGTTG"
 
 #Spacer -/75
-forward75="GATCAGGCGAAGGCG"
-reverse75="CGCCTTCGCCTGATC"
+forward75="ATTACGCCTGATCAGGCGAAGGCGA"
+reverse75="TCGCCTTCGCCTGATCAGGCGTAAT"
 
 #Spacer -/76
-forward76="ATTGCAGCGACGGGC"
-reverse76="GCCCGTCGCTGCAAT"
+forward76="TTCAGTAAATTGCAGCGACGGGCGA"
+reverse76="TCGCCCGTCGCTGCAATTTACTGAA"
 
 #Spacer -/77
-forward77="CAACGACGCTGTATT"
-reverse77="AATACAGCGTCGTTG"
+forward77="CTTCAACGACGCTGTATTGGGCCAT"
+reverse77="ATGGCCCAATACAGCGTCGTTGAAG"
 
 #Spacer -/78
-forward78="AGCAGCATGGACGGTTT"
-reverse78="AAACCGTCCATGCTGCT"
+forward78="AGCAGCATGGACGGTTTCGCCTGTA"
+reverse78="TACAGGCGAAACCGTCCATGCTGCT"
 
 #Spacer -/79
-forward79="GCGGATGTGGTGGTC"
-reverse79="GACCACCACATCCGC"
+forward79="GTTGCGGATGTGGTGGTCGCGTAGC"
+reverse79="GCTACGCGACCACCACATCCGCAAC"
 
 #Spacer -/80
-forward80="GTACATAGCGAGCTG"
-reverse80="CAGCTCGCTATGTAC"
+forward80="TTGGCGTACATAGCGAGCTGTGCGG"
+reverse80="CCGCACAGCTCGCTATGTACGCCAA"
 
 #Spacer -/81
-forward81="GCCGCGGGTTTCGTT"
-reverse81="AACGAAACCCGCGGC"
+forward81="TTGTGCCGCCGCGGGTTTCGTTCAC"
+reverse81="GTGAACGAAACCCGCGGCGGCACAA"
 
 #Spacer -/82
-forward82="GGGGCGTGTGTTCGTA"
-reverse82="TACGAACACACGCCCC"
+forward82="GGGGCGTGTGTTCGTAGTCGCCTAA"
+reverse82="TTAGGCGACTACGAACACACGCCCC"
 
 #Spacer -/83
-forward83="CTGGTGTGCTTATGCCT"
-reverse83="AGGCATAAGCACACCAG"
+forward83="GTGCTGGTGTGCTTATGCCTAACAG"
+reverse83="CTGTTAGGCATAAGCACACCAGCAC"
 
 #Spacer -/84
-forward84="CAAATGTTTGGACTGTGATC"
-reverse84="GATCACAGTCCAAACATTTG"
+forward84="CAAATGTTTGGACTGTGATCAATTC"
+reverse84="GAATTGATCACAGTCCAAACATTTG"
 
 #Spacer -/85
-forward85="TTGTCGCGCGCCTTTTT"
-reverse85="AAAAAGGCGCGCGACAA"
+forward85="TTGTCGCGCGCCTTTTTCCAGCCGA"
+reverse85="TCGGCTGGAAAAAGGCGCGCGACAA"
 
 #Spacer -/86
-forward86="GTTTCAGTTTTCTTGTCCC"
-reverse86="GGGACAAGAAAACTGAAAC"
+forward86="GCGTTTCAGTTTTCTTGTCCCAGTG"
+reverse86="CACTGGGACAAGAAAACTGAAACGC"
 
 #Spacer -/87
-forward87="CTGGTTGTTGCCCGG"
-reverse87="CCGGGCAACAACCAG"
+forward87="ACTGGTTGTTGCCCGGCGACGGCGG"
+reverse87="CCGCCGTCGCCGGGCAACAACCAGT"
 
 #Spacer -/88
-forward88="TGTTCGGTGTTCTCTG"
-reverse88="CAGAGAACACCGAACA"
+forward88="AAGTGGTGTTCGGTGTTCTCTGTAC"
+reverse88="GTACAGAGAACACCGAACACCACTT"
 
 #Spacer -/89
-forward89="TCATGACGAGCCCGCA"
-reverse89="TGCGGGCTCGTCATGA"
+forward89="CGATCCGGTCATGACGAGCCCGCAG"
+reverse89="CTGCGGGCTCGTCATGACCGGATCG"
 
 #Spacer -/90
-forward90="ACACGGCCTGATCGGT"
-reverse90="ACCGATCAGGCCGTGT"
+forward90="ATCACGACACGGCCTGATCGGTGTC"
+reverse90="GACACCGATCAGGCCGTGTCGTGAT"
 
 #Spacer -/91
-forward91="CGGATTGTCTGGCCC"
-reverse91="GGGCCAGACAATCCG"
+forward91="GCGTCGGCCGGATTGTCTGGCCCAC"
+reverse91="GTGGGCCAGACAATCCGGCCGACGC"
 
 #Spacer -/92
-forward92="TAAGCACGCGTCTGTCA"
-reverse92="TGACAGACGCGTGCTTA"
+forward92="CGTCGGCTAAGCACGCGTCTGTCAA"
+reverse92="TTGACAGACGCGTGCTTAGCCGACG"
 
 #Spacer -/93
-forward93="GACCACCGAATCACCAT"
-reverse93="ATGGTGATTCGGTGGTC"
+forward93="GGTGAGGACCACCGAATCACCATCA"
+reverse93="TGATGGTGATTCGGTGGTCCTCACC"
 
 #Spacer -/94
-forward94="TCTGGTAGTGGGCTTCT"
-reverse94="AGAAGCCCACTACCAGA"
+forward94="TCTGGTAGTGGGCTTCTGCCGGTGC"
+reverse94="GCACCGGCAGAAGCCCACTACCAGA"
 
 
 cat $forReads $revReads>seq
@@ -458,64 +459,27 @@ echo "$extspacer" >> $n.spacer.txt
 echo "spacer01	spacer02	spacer03	spacer04	spacer05	spacer06	spacer07	spacer08	spacer09	spacer10	spacer11	spacer12	spacer13	spacer14	spacer15	spacer16	spacer17	spacer18	spacer19	spacer20	spacer21	spacer22	spacer23	spacer24	spacer25	spacer26	spacer27	spacer28	spacer29	spacer30	spacer31	spacer32	spacer33	spacer34	spacer35	spacer36	spacer37	spacer38	spacer39	spacer40	spacer41	spacer42	spacer43" >> $n.spacer.txt
 echo "$spacer" >> $n.spacer.txt
 
+
 mybinaries=`echo $spacer | awk '{for(i=1;i<=NF;i++) if ($i >= 1) print 1; else print 0}' | tr -cd "[:print:]"`
-#`echo $spacer | awk 'NR==2 {for(i=1;i<=NF;i++) if ($i >= 5) print 1; else print 0}' | tr -cd "[:print:]" | fold -w3`
 myextbinaries=`echo $extspacer | awk '{for(i=1;i<=NF;i++) if ($i >= 1) print 1; else print 0}' | tr -cd "[:print:]"`
 #echo "Binaries: $mybinaries, $myextbinaries"
 
+#remove last digit to make divisible by 3 for the bc function to convert to octal, spoligo reads left to right, but bc converts right to left
 spbinary=`echo $mybinaries | awk '{print substr($1,1,42)}'`
 spbinarylast=`echo $mybinaries | awk '{print substr($1,43,1)}'`
-
 exspbinary=`echo $myextbinaries | awk '{print substr($1,1,93)}'`
 exspbinarylast=`echo $myextbinaries | awk '{print substr($1,94,1)}'`
 
+#convert to octal and add last digit back
 spoligooctal=`echo "ibase=2;obase=8; $spbinary" | bc`
 WGSpoligo=`echo "$spoligooctal$spbinarylast"`
 echo "$WGSpoligo">$n.octalcode.txt
-
 exspoligooctal=`echo "ibase=2;obase=8; $exspbinary" | bc`
 WGExSpoligo=`echo "$exspoligooctal$exspbinarylast"`
 echo "$WGExSpoligo">>$n.octalcode.txt
 #echo "Octals: $exspoligooctal, $spoligooctal"
 
-#for i in $mybinaries; do 
-#if [ $i == 000 ]
-#then
-#	echo "0" >> $n.octalcode.txt
-#elif [ $i == 001 ]
-#then
-#	echo "1" >> $n.octalcode.txt
-#elif [ $i == 010 ]
-#	then
-#	echo "2" >> $n.octalcode.txt
-#elif [ $i == 011 ]
-#	then
-#	echo "3" >> $n.octalcode.txt
-#elif [ $i == 100 ]
-#	then
-#	echo "4" >> $n.octalcode.txt
-#elif [ $i == 101 ]
-#	then
-#	echo "5" >> $n.octalcode.txt
-#elif [ $i == 110 ]
-#	then
-#	echo "6" >> $n.octalcode.txt	
-#elif [ $i == 111 ]
-#	then	
-#	echo "7" >> $n.octalcode.txt
-#elif [ $i == 0 ]
-#	then	
-#	echo "0" >> $n.octalcode.txt
-#elif [ $i == 1 ]
-#	then
-#	echo "1" >> $n.octalcode.txt
-#else
-#	echo "***Error***" >> $n.octalcode.txt
-#fi
-#done
 
-#tr -d '\n' < $n.octalcode.txt | awk -v x="$n" 'BEGIN{OFS="\t"}{print x, $0}' > spoligo.txt
-#WGSpoligo=`cat $n.octalcode.txt | tr -cd "[:print:]"`
 echo "$n  $WGSpoligo">spoligo.txt
 echo "$WGExSpoligo">>spoligo.txt
 # Add infor to spoligoCheck.txt
