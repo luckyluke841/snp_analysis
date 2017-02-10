@@ -950,9 +950,10 @@ else
     gbk_file="${dircalled}/${mygbk}"
     echo "Genbank file being used: $gbk_file"
     echo "Counting the number of chromosomes in first 100 samples, started -->  `date`"
-    chromCount=`awk ' $0 !~ /^#/ {print $1}' $(ls *vcf | head -100) | sort | uniq -d | awk 'END {print NR}'`
+    awk ' $0 !~ /^#/ {print $1}' $(ls starting_files/*vcf | head -100) | sort | uniq -d > chroms
+    chromCount=`awk 'END {print NR}' chroms`
     echo "The number of chromosomes/segments seen in VCF: $chromCount"
-    awk ' $0 !~ /^#/ {print $1}' $(ls *vcf | head -100) | sort | uniq -d > chroms
+    awk ' $0 !~ /^#/ {print $1}' $(ls starting_files/*vcf | head -100) | sort | uniq -d > chroms
     echo "These are the chromosomes/segments found:"
     cat chroms
 fi
@@ -1192,6 +1193,8 @@ for d in $directories; do
     pause
 
     script2_all_intergrate.py ${filterdir} ${d}
+    sed 's/\(.*\)_\([0-9]*\)$/\1-\2/' < each_vcf-poslist.txt > each_vcf-poslist.temp; mv each_vcf-poslist.temp each_vcf-poslist.txt
+    mv each_vcf-poslist.txt ${startingdirectory}
     if [[ -z $gbk_file ]]; then
         echo "No gbk file"
     else
@@ -1215,8 +1218,8 @@ echo "d: $d"
 # Add map qualities to sorted table
 
 #n Get just the position.  The chromosome must be removed
-awk ' NR == 1 {print $0}' ${d}-organized-table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
-
+#awk ' NR == 1 {print $0}' ${d}-organized-table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
+cat ${root}/each_vcf-poslist.txt > $d.positions
 printf "reference_pos\tmap-quality\n" > quality.txt
 echo "`date` --> Organized table map quality gathering for $d"
 
@@ -1276,9 +1279,12 @@ chmod 755 ./$d.mapvalues.py
 
 add_mapping_values_sorted
 sleep 5
+pwd
+pause
 
 ./$d.mapvalues.py ${d}.table.txt quality.txt
 mv $d.finished_table.txt ${d}.table.txt
+pause
 
 ./$d.mapvalues.py ${d}-organized-table.txt quality.txt
 mv $d.finished_table.txt ${d}-organized-table.txt
@@ -1645,10 +1651,9 @@ function all_vcfs () {
     #current group being worked on
 
 script2_all_intergrate.py ${filterdir} ${d}
-
-# Getting annoations
-awk '{print $1}' parsimony_filtered_total_alt | sed 's/$//' >> ${dircalled}/each_vcf-poslist.txt
-
+pause
+sed 's/\(.*\)_\([0-9]*\)$/\1-\2/' < each_vcf-poslist.txt > each_vcf-poslist.temp; mv each_vcf-poslist.temp each_vcf-poslist.txt
+mv each_vcf-poslist.txt ${root}
 if [[ -z $gbk_file ]]; then
     echo "No gbk file"
 else
@@ -1665,7 +1670,6 @@ if [ "$eflag" -o "$aflag" ]; then
     cd ./all_vcfs
     all_vcfs
     pthreads="yes"
-    pause
     alignTable
     pause
 else
