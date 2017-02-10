@@ -259,23 +259,23 @@ for i in ${output}/*.list; do
             then
             let pos2=pos1+1
                 while [ $pos1 -lt $pos2 ]; do
-                #echo $pos1
                 echo ${chromosome_prefix}_${pos1} >> ${output}/${readyfile}.txt
                 let pos1=pos1+1
                 done
             else
             let pos2=pos2+1
                 while [ $pos1 -lt $pos2 ]; do
-                #echo $pos1
-                ${chromosome_prefix}_${pos1} >> ${output}/${readyfile}.txt
+                echo ${chromosome_prefix}_${pos1} >> ${output}/${readyfile}.txt
                 let pos1=pos1+1
                 done
             fi
-        done) &
+        done)  &
         let count+=1
         [[ $((count%NR_CPUS)) -eq 0 ]] && wait
 done
 wait
+# Add all FilterToAll to each group filter
+for i in ${output}/*-*.txt; do cat ${output}/FilterToAll.txt >> $i; done
 
 rm ${output}/*.list
 }
@@ -833,7 +833,6 @@ elif [[ $1 == bovis ]]; then
     excelinfile="/bioinfo11/TStuber/Results/mycobacterium/tbc/tbbov/script_dependents/Filtered_Regions.xlsx"
     parseXLS | sed 's/ u//g' | tr "," "\t" | sed 's/\[//g' |sed 's/\]//g' |sed 's/ //g' | sed 's/^u//g' | sed 's/\.0//g' | tr -d "'"  > ${filterdir}/filterFile.txt
     filterFileCreations
-pause
 
 elif [[ $1 == h37 ]]; then
     genotypingcodes="/bioinfo11/TStuber/Results/mycobacterium/Untitled.tab"
@@ -950,6 +949,12 @@ else
     mygbk=`basename $gbk_file`
     gbk_file="${dircalled}/${mygbk}"
     echo "Genbank file being used: $gbk_file"
+    echo "Counting the number of chromosomes in first 100 samples, started -->  `date`"
+    chromCount=`awk ' $0 !~ /^#/ {print $1}' $(ls *vcf | head -100) | sort | uniq -d | awk 'END {print NR}'`
+    echo "The number of chromosomes/segments seen in VCF: $chromCount"
+    awk ' $0 !~ /^#/ {print $1}' $(ls *vcf | head -100) | sort | uniq -d > chroms
+    echo "These are the chromosomes/segments found:"
+    cat chroms
 fi
 
 # Remove selected files from comparison
@@ -1186,24 +1191,31 @@ for d in $directories; do
     pwd
     pause
 
-    /Users/tstuber/workspace/stuber/python_scripts/script2_all_intergrate.py ${filterdir} ${d}
+    script2_all_intergrate.py ${filterdir} ${d}
+    if [[ -z $gbk_file ]]; then
+        echo "No gbk file"
+    else
+    # If e or a flag was called annotations are made in all_vcf function
+        if [ "$eflag" -o "$aflag" ]; then
+            echo "${dircalled}/each_vcf-poslist.txt already complete, skipping"
+        else
+            get_annotation
+        fi
+    fi
+    pause
     alignTable
+    pause
 done
 }
 #****************************************************************
 function alignTable () {
 pwd
 echo "d: $d"
-pause
-
-rm ${d}.table.txt
-mv ${d}.organized_table.txt ../
-cd ..
 
 # Add map qualities to sorted table
 
 #n Get just the position.  The chromosome must be removed
-awk ' NR == 1 {print $0}' ${d}.organized_table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
+awk ' NR == 1 {print $0}' ${d}-organized-table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
 
 printf "reference_pos\tmap-quality\n" > quality.txt
 echo "`date` --> Organized table map quality gathering for $d"
@@ -1268,8 +1280,8 @@ sleep 5
 ./$d.mapvalues.py ${d}.table.txt quality.txt
 mv $d.finished_table.txt ${d}.table.txt
 
-./$d.mapvalues.py ${d}.organized_table.txt quality.txt
-mv $d.finished_table.txt ${d}.organized_table.txt
+./$d.mapvalues.py ${d}-organized-table.txt quality.txt
+mv $d.finished_table.txt ${d}-organized-table.txt
 rm quality.txt
 
 # When multiple tables are being done decrease cpus being used
@@ -1285,9 +1297,9 @@ else
     # Rename output tables back to original names
     mv $d.finished_table.txt ${d}.table.txt
 
-    ./$d.mapvalues.py $d.organized_table.txt ${dircalled}/each_annotation_in
+    ./$d.mapvalues.py $d-organized-table.txt ${dircalled}/each_annotation_in
     # Rename output tables back to original names
-    mv $d.finished_table.txt $d.organized_table.txt
+    mv $d.finished_table.txt $d-organized-table.txt
 
     rm $d.positions
     rm $d.mapvalues.py
@@ -1306,10 +1318,10 @@ if [[ -z $gbk_file ]]; then
     max=$(awk 'max < NF { max = NF } END { print max }' ${d}.position_ordered_table.txt)
     awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}.position_ordered_table.txt > ${d}.position_ordered_table.temp
     mv ${d}.position_ordered_table.temp ${d}.position_ordered_table.txt
-    echo "No_gbk_available_for_annotation" >> ${d}.organized_table.txt
-    max=$(awk 'max < NF { max = NF } END { print max }' ${d}.organized_table.txt)
-    awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}.organized_table.txt > ${d}.organized_table.temp
-    mv ${d}.organized_table.temp ${d}.organized_table.txt
+    echo "No_gbk_available_for_annotation" >> ${d}-organized-table.txt
+    max=$(awk 'max < NF { max = NF } END { print max }' ${d}-organized-table.txt)
+    awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}-organized-table.txt > ${d}.organized-table.temp
+    mv ${d}.organized-table.temp ${d}-organized-table.txt
 
 fi
 
@@ -1322,8 +1334,8 @@ nexus_tree_convert.sh RAxML*tre
 for i in `cat ${root}/recentfiles`; do perl -i -pe "s/$i\$/\t${i}\[\&\!color=\#ff0000\]/" RAxML*.nex; done
 rm RAxML*tre
 
-${root}/excelwriter.py ${d}.organized_table.txt
-rm ${d}.organized_table.txt
+${root}/excelwriter.py ${d}-organized-table.txt
+rm ${d}-organized-table.txt
 ${root}/excelwriter.py ${d}.position_ordered_table.txt
 rm ${d}.position_ordered_table.txt
 
@@ -1499,13 +1511,9 @@ fi
 for i in *.vcf; do
 
 	# If there is one chromosome present just get the position.  If multiple chromosomes are present than the chromsome identification needs to be identified.  The filter file needs to sync with this chromosome identification.  If multiple chromosomes the filter file will be kept as a text file.  If a single chromosome an linked Excel file can be used.
-	if [ $((chromCount)) -eq 1 ]; then
-		# Get quality positions in VCF
-		awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ || /;AC=2;/ {print $2}' $i > quality-${i%.vcf}
-		else
-		# Get quality positions in VCF and include chromosome identification
-		awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/  || /;AC=2;/ {print $1 "-" $2}' $i > quality-${i%.vcf}
-	fi
+	
+    # Get quality positions in VCF
+	awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ || /;AC=2;/ {print $2}' $i > quality-${i%.vcf}
 
 	echo "quality-${i%.vcf}:"
 
@@ -1527,8 +1535,8 @@ for i in *.vcf; do
 	if [ $sizeGroup -lt 1 ]; then # There was not a position found that places VCF into group
 		echo "$i Grp not found" >> section3
 		echo "$i was not assigned a Group"
-		elif [ $sizeGroup -gt 1 ]; then
-		echo "$i has multiple groups" >> section3
+        elif [ $sizeGroup -gt 1 ]; then
+        echo "$i has multiple groups" >> section3
 		echo "$i has multiple groups"
 		for l in $loops; do
 			echo "making group $i"
@@ -1635,26 +1643,31 @@ function all_vcfs () {
 #Arguments
     #filterfile directory
     #current group being worked on
-echo "Filterdirectoy ${filterdir}"
-echo "group ${d}"
-pwd
-pause
 
-/Users/tstuber/workspace/stuber/python_scripts/script2_all_intergrate.py ${filterdir} ${d}
+script2_all_intergrate.py ${filterdir} ${d}
+
+# Getting annoations
+awk '{print $1}' parsimony_filtered_total_alt | sed 's/$//' >> ${dircalled}/each_vcf-poslist.txt
+
+if [[ -z $gbk_file ]]; then
+    echo "No gbk file"
+else
+    get_annotation
+fi
 
 }
 
 # if doing a single tree run RAxML with multiple threads
-pwd
-pause
 
 if [ "$eflag" -o "$aflag" ]; then
     doing_allvcf="doing_allvcf"    
+    d="FilterToAll"
+    cd ./all_vcfs
     all_vcfs
-	d="FilterToAll"
-    cd ./fasta
     pthreads="yes"
+    pause
     alignTable
+    pause
 else
 	echo "not ran" > all_vcfs/not_ran
     echo "Tree not ran for all_vcfs"
@@ -1684,23 +1697,6 @@ cd ${fulDir}/all_clades
 fasta_table
 wait
 echo "At line $LINENO, sleeping 5 second"; sleep 5s
-
-###
-if [[ -z $gbk_file ]]; then
-    echo "No gbk file"
-else
-    # If e or a flag was called annotations are made in all_vcf function
-    if [ "$eflag" -o "$aflag" ]; then
-        echo "${dircalled}/each_vcf-poslist.txt already complete, skipping"
-    else
-        get_annotation
-    fi
-fi
-###
-wait
-rm annotate*py 
-
-cd ${fulDir}
 
 cp ${DefiningSNPs} ./
 
