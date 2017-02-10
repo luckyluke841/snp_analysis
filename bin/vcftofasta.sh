@@ -260,14 +260,14 @@ for i in ${output}/*.list; do
             let pos2=pos1+1
                 while [ $pos1 -lt $pos2 ]; do
                 #echo $pos1
-                echo $pos1 >> ${output}/${readyfile}.txt
+                echo ${chromosome_prefix}_${pos1} >> ${output}/${readyfile}.txt
                 let pos1=pos1+1
                 done
             else
             let pos2=pos2+1
                 while [ $pos1 -lt $pos2 ]; do
                 #echo $pos1
-                echo $pos1 >> ${output}/${readyfile}.txt
+                ${chromosome_prefix}_${pos1} >> ${output}/${readyfile}.txt
                 let pos1=pos1+1
                 done
             fi
@@ -515,162 +515,7 @@ chmod 755 ./annotate.py
 
 }
     
-#####################################################
-
-# single quotes need around EOL to prevent variable expansion
-# Create "here-document" to prevent a dependent file.
-cat >./snpTableSorter.pl <<'EOL'
-#!/usr/bin/env perl
-
-use strict;
-use warnings;
-use diagnostics;
-use List::MoreUtils qw(firstidx);
-use Data::Dumper qw(Dumper);
-
-#I/O
-my $tableIN = $ARGV[0]; #.table.txt
-my $sampleOrderIN = $ARGV[1]; #cleanedAlignment.txt
-my $organizedOUT = $ARGV[2]; #.organized_table.txt
-
-#Check if 3 arguments
-if (scalar(@ARGV) != 3)
-{
-   print "Usage: perl snpTableSorter.pl <table.txt> <cleanedAlignment.txt>  <organized_table.txt>\n";
-   exit;
-}
-
-# Parse table file
-
-#open table.txt
-open(my $tableFH, '<', $tableIN) or die "Can't read $tableIN: $!\n";
-
-my %table;
-
-chomp(my $header = <$tableFH>); #first line -> reference_pos
-my @refPosList = split(/\t/, $header);
-#@refPos = $refPos[1..$#refPos]; #"delete" fist elment of array
-
-while (my $line = <$tableFH>)
-{
-    chomp($line); #remove carriage return
-    next if $line eq ''; #skip if empty
-    
-    my @fields = split(/\t/, $line);
-    my $sample = $fields[0];
-    for my $i (1..$#fields)
-    {
-        push( @{ $table{$sample}{$refPosList[$i]} }, $fields[$i] );
-    }
-}
-
-#print Dumper \%table;
-
-# Order positions and samples
-
-my %countPos;
-#my %countSam; #Commented because order comes from the RAxML output
-
-#number of REF alleles
-foreach my $sample(sort keys %table)
-{
-    my $cntREF = 0;
-    foreach my $pos (sort keys %{ $table{$sample} })
-    {
-        my $REF = @{ $table{'reference_call'}{$pos} }[0];
-        my $allele = @{ $table{$sample}{$pos} }[0];
-        
-        $countPos{$pos} += 1 if ( $allele eq $REF );
-#        $countSam{$sample} += 1 if ( $allele eq $REF); #Commented because order comes from the RAxML output
-    }
-}
-
-#print Dumper \%counts;
-
-#Order positions based on REF allele counts and save to array
-my @orderedPos;
-foreach my $pos (sort { $countPos{$a} <=> $countPos{$b} } keys %countPos)
-{
-#	print $counts{$pos}; #count values
-#	print "\n";
-	push(@orderedPos, $pos); #position names
-}
-
-#open cleanedAlignment.txt
-open(my $samFH, '<', $sampleOrderIN) or die "Can't read $sampleOrderIN: $!\n";
-
-#skip fisrt line
-chomp(my $header1 = <$samFH>); #first line -> reference_pos
-
-my @orderedSam;
-
-#read the rest of the file
-while (my $line = <$samFH>)
-{
-    chomp($line); #remove carriage return
-    next if $line eq ''; #skip if empty
-    
-    push(@orderedSam, $line);
-}
-
-#refine position sorting by determining the row number of the first ALT allele
-my %rank;
-my $cnt = 0;
-
-foreach my $sample (@orderedSam)
-{
-	$cnt += 1;
-	foreach my $pos (@orderedPos)
-	{
-		my $REF = @{ $table{'reference_call'}{$pos} }[0];
-		my $allele = @{ $table{$sample}{$pos} }[0];
-		
-		if ( $allele ne $REF && !exists $rank{$pos} && !defined $rank{$pos} )
-		{
-			$rank{$pos} = $cnt;
-		}
-	}
-}
-
-
-#Order positions based on REF allele counts and save to array
-my @orderedPosTuned;
-#foreach my $pos (sort { $countPos{$a} <=> $countPos{$b} || $rank{$a} <=> $rank{$b} } keys %countPos)
-foreach my $pos (sort { $rank{$a} <=> $rank{$b} || $countPos{$a} <=> $countPos{$b} } keys %countPos)
-{
-#	print $counts{$pos}; #count values -> debug
-#	print "\n";
-	push(@orderedPosTuned, $pos); #position names
-} 
-
-#   Output sorted table
-
-#Write to file
-open(my $tmpFH, '>', $organizedOUT) or die "Could not write to $organizedOUT: $!\n";
-
-print { $tmpFH } ("reference_pos\t");
-
-my $positions = join("\t", @orderedPosTuned);
-print { $tmpFH } ("$positions\n");
-
-
-foreach my $sample (@orderedSam)
-{
-	print { $tmpFH } ("$sample");
-	
-	foreach my $pos (@orderedPosTuned)
-	{
-		my $allele = @{ $table{$sample}{$pos} }[0];
-		print { $tmpFH } ("\t$allele");
-	}
-	print { $tmpFH } ("\n");
-}
-
-EOL
-
-chmod 755 ./snpTableSorter.pl
-
-#####################################################
+####################################################
 
 # Environment controls:
 
@@ -959,6 +804,7 @@ elif [[ $1 == ovis ]]; then
 
 elif [[ $1 == bovis ]]; then
     genotypingcodes="/bioinfo11/TStuber/Results/mycobacterium/Untitled.tab"
+    chromosome_prefix="AF2122_NC002945"
     gbk_file="/home/shared/mycobacterium/tbc/snppipeline/tbbov/NC_002945.gbk"
     # This file tells the script how to cluster VCFs
     DefiningSNPs="/bioinfo11/TStuber/Results/mycobacterium/tbc/tbbov/script_dependents/DefiningSNPsGroupDesignations.txt"
@@ -987,6 +833,7 @@ elif [[ $1 == bovis ]]; then
     excelinfile="/bioinfo11/TStuber/Results/mycobacterium/tbc/tbbov/script_dependents/Filtered_Regions.xlsx"
     parseXLS | sed 's/ u//g' | tr "," "\t" | sed 's/\[//g' |sed 's/\]//g' |sed 's/ //g' | sed 's/^u//g' | sed 's/\.0//g' | tr -d "'"  > ${filterdir}/filterFile.txt
     filterFileCreations
+pause
 
 elif [[ $1 == h37 ]]; then
     genotypingcodes="/bioinfo11/TStuber/Results/mycobacterium/Untitled.tab"
@@ -1152,28 +999,6 @@ wait
 sleep 2
 
 #echo "*********************************************************************" >> section2
-}
-
-#################################################################################
-
-
-# Change SNPs with low QUAL values to N, based on parameter set above in variable settings
-
-function changeLowCalls () {
-echo "Changeing low calls, started --> $(date)"
-
-#for i in *.vcf; do
-#(base=`basename $i .vcf`; awk -v x=$lowEnd -v y=$highEnd 'BEGIN {OFS="\t"} { if ($6 >= x && $6 <= y) print $1, $2, $3, $4, "N", $6, $7, $8; else print $0 }' $i > ${base}.txt; rm $i; mv ${base}.txt ${base}.vcf) &
-#    let count+=1
-#    [[ $((count%NR_CPUS)) -eq 0 ]] && wait
-#done
-
-ls *vcf | parallel 'awk -v x=$lowEnd -v y=$highEnd '"'"'BEGIN {OFS="\t"} { if ($6 >= x && $6 <= y) print $1, $2, $3, $4, "N", $6, $7, $8; else print $0 }'"'"' {} > {.}.txt' && \
-for f in *txt; do mv "$f" "${f%.txt}.vcf"; done
-
-wait
-sleep 2
-
 }
 
 #################################################################################
@@ -1352,400 +1177,54 @@ echo "$directories"
 startingdirectory=$(pwd)
 
 for d in $directories; do
+    cd ${startingdirectory}/$d/
+    #Arguments
+        #filterfile directory
+        #current group being worked on
+    echo "Filterdirectoy ${filterdir}"
+    echo "group ${d}"
+    pwd
+    pause
 
-cd ${startingdirectory}/$d/
-dir=$(basename $PWD)
-echo "Directory:  $dir"
-
-mkdir "starting_files"
-cp *.vcf ./starting_files
-
-	if [ $FilterGroups == yes ]; then
-		if [ $((chromCount)) -eq 1 ]; then
-			#Mark vcf allowing areas of the genome to be removed from the SNP analysis
-			for i in *.vcf; do
-				(m=$(basename "$i"); n=$(echo $m | sed $dropEXT)
-				awk '$1 !~ /#/ && $10 !~ /\.\/\./ {print $2}' $i > ${i}.file
-				cat "${FilterDirectory}/$d.txt" ${i}.file >> ${i}.catFile
-				cat ${i}.catFile | sort | uniq -d > ${i}.txt
-				pos=$(cat ${i}.txt | tr "\n" "W" | sed 's/W/\$\|\^/g' | sed 's/\$\|\^$//' | sed 's/$/\$/' | sed 's/^/\^/' | sed 's/|$$//')
-				if [ -z $pos ]; then
-					#echo "pos is zero... adding a value"
-					pos='^1000000000$'
-				fi
-
-				awk -v x=$pos 'BEGIN {FS="\t"; OFS="\t"} { if($2 ~ x ) print $1, $2, $3, $4, $5, $6, "Not_Included", $8, $9, $10; else print $0}' $i > ${n}.filtered.vcf
-
-				rm ${i}.file
-				rm ${i}.catFile
-				rm ${i}.txt
-				grep -v "Not_Included" ${n}.filtered.vcf > $i)  &
-				let count+=1
-				[[ $((count%NR_CPUS)) -eq 0 ]] && wait
-			done
-			wait
-		else
-			#Mark vcf allowing areas of the genome to be removed from the SNP analysis
-			for i in *.vcf; do m=$(basename "$i"); n=$(echo $m | sed $dropEXT) # n is name with all right of "_" and "." removed.
-				grep '^#' $i > ${i}.header
-				grep -v '^#' $i > ${i}.body
-				#Mark vcf allowing areas of the genome to be removed from the SNP analysis
-				# Iterate through chrom number range
-				COUNTER=0
-				for c in $(cat $dircalled/chroms); do
-					let COUNTER=COUNTER+1
-					#echo The counter is $COUNTER
-					#echo "********* In $d --> $n working on chromos $c **********"
-                awk -v c=$c 'BEGIN{OFS="\t"} $1 !~ /#/ && $10 !~ /\.\/\./ && $1 == c {print $2}' ${i}.body > ${i}.filepositions
-                awk -v c=$c ' $1 == c {print $2}' ${FilterDirectory}/${d}.txt > ${i}.positionstofilter
-                cat ${i}.positionstofilter ${i}.filepositions | sort -k1,1 | uniq -d > ${i}.foundpositions
-					pos=`cat ${i}.foundpositions | tr "\n" "W" | sed 's/W/\$\|\^/g' | sed 's/\$\|\^$//' | sed 's/$/\$/' | sed 's/^/\^/' | sed 's/|$$//'`
-					if [[ -n $pos ]]; then
-						echo "pos: $pos" > /dev/null 2>&1
-					else
-					#	echo "string is zero; no findings for pos; giving pos=1"
-						pos="^1$"
-					fi
-
-                awk -v var1=$c -v var2=$pos 'BEGIN {FS="\t"; OFS="\t"} { if($1 ~ var1 && $2 ~ var2) print $1, $2, $3, $4, $5, $6, "Not_Included", $8, $9, $10; else print $0}' ${i}.body | grep "$c" > ${n}.filterchrom${COUNTER}.vcf
-				done
-				cat ${i}.header ${n}.filterchrom*.vcf > ${n}.filtered.vcf
-				grep -v "Not_Included" ${n}.filtered.vcf > $i
-				rm ${i}.header
-				rm ${i}.body
-				rm ${i}.filepositions
-				rm ${i}.positionstofilter
-				rm ${n}.filterchrom*.vcf
-				rm ${i}.foundpositions
-
-			done
-		fi
-	rm *.filtered.vcf
-	wait
-	sleep 2
-
-	fi
-
-# Make concatemer with the position and REF call.
-# Factor in possible multiple chromosomes
-# Get rid of duplicates in concatemer and list all the positions and REF calls
-for i in *.vcf; do
-	awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ {print $1 "-" $2, $4}' $i >> concatemer
+    /Users/tstuber/workspace/stuber/python_scripts/script2_all_intergrate.py ${filterdir} ${d}
+    alignTable
 done
-
-# Get rid of duplicates in concatemer and list all the positions and REF calls
-sort -k1,1 < concatemer | uniq > filtered_total_alt
-awk '{print $1}' filtered_total_alt > filtered_total_pos
-
-# Count the number of SNPs
-totalSNPs=`wc -l  filtered_total_pos`
-
-######################## FILTER FILE CREATOR ###########################
-if [ "$cflag" ]; then
-	findpositionstofilter
-fi
-#########################################################################
-
-# Find AC1 positions also found in total_pos
-awk '{print $1}' filtered_total_pos > total.list
-
-    for i in *.vcf; do
-	(m=$(basename "$i"); n=$(echo $m | sed 's/\..*//')
-	# search for AC1 positions
-	awk ' $0 !~ /^#/ && $8 ~ /^AC=1/ && $6 > 0 {print $1 "-" $2}' $i > ${n}.list
-	# AC1 positions that are being found in this group
-	positionsfound=`cat ${n}.list total.list | sort -n | uniq -d`
-	countfind=`echo $positionsfound | wc -w`
-	#echo "positonsfound: $positionsfound  countfind: $countfind"
-	rm ${n}.list
-	if [[ -z $positionsfound ]]; then
-		positionsfound="No positions found"
-	fi
-	
-	if [[ $countfind -gt 2  ]]; then
-	searchname=`echo $n | sed 's/_.*//'`
-
-        	if [[  $argUsed == para ]]; then
-            	unmappedContigs=`grep -A 1 "Unmapped contig count" /bioinfo11/TStuber/Results/mycobacterium/mac/para_cattle-bison/data/${searchname}/bwamem-gatk/qualityvalues/*stats.txt`
-        	elif [[  $argUsed == bovis ]]; then
-            	unmappedContigs=`grep -A 1 "Unmapped contig count" /bioinfo11/TStuber/Results/mycobacterium/tbc/tbbov/script1/${searchname}/bwamem-gatk/qualityvalues/*stats.txt`
-        	else
-            contigMessage="possibly set a new contig path at script line: $LINENO"
-        	fi
-
-        	if [[ -z $unmappedContigs ]]; then
-			unmappedContigs="Contig counts not available"
-		fi
-
-	echo "$d" >> $d-AC1postions.txt
-	echo "" >> $d-AC1postions.txt
-
-	echo "$d Sample: $n  AC1 findings: $countfind  $unmappedContigs $contigMessage" > delete
-	tr -d "\n" < delete >> $d-AC1postions.txt
-	echo "" >> $d-AC1postions.txt
-	tr -d "\n" < delete >> ${fulDir}/emailAC1counts.txt
-        echo "" >> ${fulDir}/emailAC1counts.txt
-	
-	for p in `echo $positionsfound`; do
-            position=`echo $p | sed 's/chrom[0-9]*-//'`
-            awk -v p="$position" '$2 == p {print $0}' $i >> $d-AC1postions.txt
-        done
-
-    fi)  &
-    let count+=1
-    [[ $((count%NR_CPUS)) -eq 0 ]] && wait
-    done
-    wait
-rm total.list
-
-if [ -e delete ]; then 
-    rm delete
-fi
-
-# Count the number of SNPs
-
-totalSNPs=`grep -c ".*" filtered_total_pos`
-echo "$d total SNPs: $totalSNPs" >> ../../section4
-
-echo "***Creating normalized vcf using AC2, QUAL > $QUAL"
-# Grab the name of the vcf file
-
-#########################################################################
-# Count the number of SNPs
-filteredSNPs=`wc -l filtered_total_pos`
-echo "Total SNPs after filtering $filteredSNPs"
-
-
-for i in *.vcf; do
-	(n=${i%.vcf}
-	awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ {print $1 "-" $2, $5}' $i > $n.allsnps_alt
-	#get SNPs of interest
-	fgrep -f filtered_total_pos $n.allsnps_alt > $n.targetsnps_alt
-	#if SNP not found in sample default call to reference, normalize.
-	cat $n.targetsnps_alt filtered_total_alt | awk '{ if (a[$1]++ == 0) print $0; }' |  sort -nk1,1 > $n.filteredsnps_alt
-
-	# If position has zero map quality change alt call to -
-	# get positions being used
-	awk '{print $1}' $n.filteredsnps_alt > $n.filteredsnps_pos
-	# Get zero coverage positions.
-	awk ' $0 !~ /^#/ && $10 ~ /\.\/\./ {print $1 "-" $2}' ${i} > ${n}.zeropositions
-
-	# if duplicate then zero mapped position found for sample
-	cat $n.filteredsnps_pos ${n}.zeropositions | sort | uniq -d | awk '{print $1, "-"}' > ${n}.zerotomerge_alt #the - makes it and alt file
-
-	#if zero positions found merge them to the SNPs found
-	if [ -s ${n}.zerotomerge_alt ]; then
-		# merge zero updates to SNP file
-		cat ${n}.zerotomerge_alt $n.filteredsnps_alt | awk '{ if (a[$1]++ == 0) print $0; }' | sort -nk1,1 > ${n}.zerofilteredsnps_alt
-		#echo "***Found zero postions: $n"
-		rm $n.filteredsnps_alt
-	else
-		#echo "no zero positions found for $n"
-		mv $n.filteredsnps_alt ${n}.zerofilteredsnps_alt
-	fi
-
-	rm $n.allsnps_alt
-	rm $n.filteredsnps_pos
-	rm $n.targetsnps_alt
-	rm ${n}.zeropositions
-	rm ${n}.zerotomerge_alt)  &
-	let count+=1
-	[[ $((count%NR_CPUS)) -eq 0 ]] && wait
-done
-wait
-sleep 5
-wait
-
-echo "`date` --> Finding parsimony informative positions"
-# Capture only positions that have more than one SNP type called at a position
-cat *zerofilteredsnps_alt | sort -nk1,1 | uniq | awk '{print $1}' | uniq -d > parsimony_informative
-# This removes calls that are the same for all isolates being analyzed
-
-# If many SNPs fgrep may not do much and be slow
-fgrep -f parsimony_informative filtered_total_alt | sort -k1,1n > parsimony_filtered_total_alt
-awk '{print $1}' parsimony_filtered_total_alt > parsimony_filtered_total_pos
-
-# Create table and fasta
-awk '{print $1}' parsimony_filtered_total_alt | awk 'BEGIN{print "reference_pos"}1' | tr '\n' '\t' | sed 's/$//' | awk '{print $0}' >> ${d}.table.txt
-
-# If e or a flag was called annotations are made in all_vcf function
-if [ "$eflag" -o "$aflag" ]; then
-    echo "${dircalled}/each_vcf-poslist.txt already complete, skipping"
-else
-    echo "Make position list for each table made"
-    awk '{print $1}' parsimony_filtered_total_alt | sed 's/$//' >> ${dircalled}/each_vcf-poslist.txt
-fi
-
-awk '{print $2}' parsimony_filtered_total_alt | awk 'BEGIN{print "reference_call"}1' | tr '\n' '\t' | sed 's/$//' | awk '{print $0}' >> ${d}.table.txt
-
-for i in *zerofilteredsnps_alt; do
-	#(
-	m=`basename "$i"`; n=`echo $m | sed 's/\..*//'`
-
-	fgrep -f parsimony_filtered_total_pos $i | sort -k1,1n > $n.pretod
-
-	##############################################################
-	# Change AC1s to IUPAC
-
-	# get positions being used
-	awk '{print $1}' ${n}.pretod > ${n}.usedpostions
-	# get AC1 positions and iupac calls  that were changed to iupac
-	awk -v Q="$QUAL" ' $0 !~ /#/ && $6 > Q && $8 ~ /^AC=1;/ {print $1 "-" $2, $5}' ${i%zerofilteredsnps_alt}vcf > ${n}.ac
-	# get just positions of those AC1 grabbed above
-	awk '{print $1}' ${n}.ac > ${n}.acpositions
-	# AC duplicate positions will need to be kept
-	cat ${n}.usedpostions ${n}.acpositions | sort | uniq -d > ${n}.actokeep
-	# get AC1 position with iupac, these are only positions already in the pretod
-
-	if [ -s ${n}.actokeep ]; then
-		fgrep -f ${n}.actokeep ${n}.ac > ${n}.actomerge
-		# merge iupac updates to filledcut
-		cat ${n}.actomerge $n.pretod | awk '{ if (a[$1]++ == 0) print $0; }' | sort -nk1,1 > $n.tod
-		rm ${n}.pretod
-		rm ${n}.actomerge
-	else
-		#echo "else done"
-		mv $n.pretod $n.tod
-	fi
-	rm ${n}.usedpostions
-	rm ${n}.ac
-	rm ${n}.acpositions
-	rm ${n}.actokeep
-	##############################################################
-
-	awk '{print $2}' $n.tod | tr -d [:space:] | sed "s/^/>$n;/" | tr ";" "\n" | sed 's/[A-Z],[A-Z]/N/g' > $n.fas
-	# Add each isolate to the table
-	awk '{print $2}' $n.tod | awk -v number="$n" 'BEGIN{print number}1' | tr '\n' '\t' | sed 's/$//' | awk '{print $0}' >> ${d}.table.txt 
-
-    #) &
-	#let count+=1
-	#[[ $((count%NR_CPUS)) -eq 0 ]] && wait
-done
-
-wait
-sleep 2
-
-#Create root sequence
-awk '{print $2}' parsimony_filtered_total_alt > root
-cat root | tr -cd "[:print:]" | sed "s/^/>root;/" | tr ";" "\n" | sed 's/[A-Z],[A-Z]/N/g' > root.fas
-echo "" >> root.fas
-
-totalSNPs=`grep -c ".*" parsimony_filtered_total_pos`
-echo "Total informative SNPs: $totalSNPs"
-
-# Make a file containing all fasta files. Used awk instead of cat to insure newline between files
-awk '{print $0}' *.fas > ${d}_alignment.fasta
-
-#Clean-up
-rm concatemer
-rm *.tod
-mkdir fasta
-mv *.fas ./fasta
-rm root
-rm *vcf
-rm filtered_total_alt
-rm filtered_total_pos
-rm parsimony_filtered_total_alt
-rm parsimony_filtered_total_pos
-rm parsimony_informative
-rm *zerofilteredsnps_alt
-
-#if [[ -z $gbk_file ]]; then
-#    cp /home/shared/Table_Template.xlsx ./${d}-Table_Template.xlsx
-#else
-#    # Copy template for annotated tables
-#    cp /home/shared/aTable_Template.xlsx ./${d}-Table_Template.xlsx
-#fi
-
-done 
 }
 #****************************************************************
 function alignTable () {
+pwd
+echo "d: $d"
+pause
 
-# Beginning in fasta folder
-echo "`date` --> RAxML started $d"
+rm ${d}.table.txt
+mv ${d}.organized_table.txt ../
+cd ..
 
-awk '{print $0}' *.fas | sed '/root/{N;d;}' >> fastaGroup.txt
-awk '{print $0}' *.fas >> RAxMLfastaGroup.txt
+# Add map qualities to sorted table
 
-#raxmlHPC-SSE3 -f a -s RAxMLfastaGroup.txt -p 12345 -x 12345 -# 100 -m GTRCAT -n ${d}
+#n Get just the position.  The chromosome must be removed
+awk ' NR == 1 {print $0}' ${d}.organized_table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
 
-#exit 1
-echo "pthreads: $pthreads"
-# If an all_vcf tree is being built, build with PTHREADs RAxML, else use non-PTHREAD SSE3
-if [ $pthreads == "yes" ]; then
-    MAX_CPUS=`grep -c ^processor /proc/cpuinfo`
-    RAXML_CPUS=`expr $MAX_CPUS - 5`
-    #raxmlHPC-SSE3 -f b -t ref -z tree -m GTRCAT -s alg -n ${d}
-    snpcount=`awk 'BEGIN{OFS="\t"}END{print NF-1}' ../${d}.table.txt`
-    # bootstrap with --> -b 123476 -N 100
-    raxmlHPC-PTHREADS-AVX2 -s RAxMLfastaGroup.txt -n ${d} -m GTRCAT -p 12345 -T ${RAXML_CPUS}&> /dev/null && nw_reroot RAxML_bestTree.${d} root | nw_display -s -w 1000 -v 20 -b 'opacity:0' -i 'font-size:8' -l 'font-family:serif;font-style:italic' -d 'stroke-width:2;stroke:blue' -u "${d} position count --> ${snpcount}, substituions/site" - > ../${d}-tree.svg && inkscape -f ../${d}-tree.svg -A ../${d}-tree.pdf; nw_reroot RAxML_bestTree.${d} root > tableinput.${d}; nw_reroot RAxML_bestTree.${d} root > rooted_RAxML_bestTree.${d}; mv rooted_RAxML_bestTree.${d} RAxML_bestTree.${d} &> /dev/null
-    wait
-    pthreads="no"
-else
-    # bootstrap with --> -b 123476 -N 100
-    raxmlHPC-SSE3 -s RAxMLfastaGroup.txt -n ${d} -m GTRCAT -p 12345 &> /dev/null && nw_reroot RAxML_bestTree.${d} root | nw_display -s -w 1000 -v 20 -b 'opacity:0' -i 'font-size:8' -l 'font-family:serif;font-style:italic' -d 'stroke-width:2;stroke:blue' -u "${d} position count --> ${snpcount}, substituions/site" - > ../${d}-tree.svg && inkscape -f ../${d}-tree.svg -A ../${d}-tree.pdf; nw_reroot RAxML_bestTree.${d} root > tableinput.${d}; nw_reroot RAxML_bestTree.${d} root > rooted_RAxML_bestTree.${d}; mv rooted_RAxML_bestTree.${d} RAxML_bestTree.${d} &> /dev/null
-wait
-fi
+printf "reference_pos\tmap-quality\n" > quality.txt
+echo "`date` --> Organized table map quality gathering for $d"
 
 if [ "$doing_allvcf" == "doing_allvcf" ]; then
-    echo "RAxML done"
+    # Done doing its job, reset, we don't want to run all thread in group tables
+    doing_allvcf="dadada"
+    # run all threads
+     echo "parallel running..."
+    cat $d.positions | parallel 'export positionnumber=$(echo {} | awk '"'"'{print $2}'"'"'); export front=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\1/'"'"'); export back=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\2/'"'"'); export avemap=$(awk -v f=$front -v b=$back '"'"'$6 != "." && $1 == f && $2 == b {print $8}'"'"' ./starting_files/*vcf | sed '"'"'s/.*MQ=\(.....\).*/\1/'"'"' | awk '"'"'{ sum += $1; n++ } END { if (n > 0) print sum / n; }'"'"' | sed '"'"'s/\..*//'"'"'); printf "$positionnumber\t$avemap\n" >> quality.txt' &> /dev/null
 else
-    # Give time for some RAxMLs to finish before morning on
-    sleep 60
+    echo "parallel running..."
+    cat $d.positions | parallel --jobs 10 'export positionnumber=$(echo {} | awk '"'"'{print $2}'"'"'); export front=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\1/'"'"'); export back=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\2/'"'"'); export avemap=$(awk -v f=$front -v b=$back '"'"'$6 != "." && $1 == f && $2 == b {print $8}'"'"' ./starting_files/*vcf | sed '"'"'s/.*MQ=\(.....\).*/\1/'"'"' | awk '"'"'{ sum += $1; n++ } END { if (n > 0) print sum / n; }'"'"' | sed '"'"'s/\..*//'"'"'); printf "$positionnumber\t$avemap\n" >> quality.txt' &> /dev/null
+sleep 60
 fi
 
-rm RAxML_parsimonyTree*
-for i in RAxML*Tree*; do mv $i ../${i}.tre; done
+echo "parallel done running"
 
-# do not organize table if > 8000 positions
-position_count=`grep -v ">" root.fas | head -1 | wc -m`
-echo "position_count: $position_count"
-if [ $((position_count)) -lt 8000 ]; then
-    # on server2 "5e-07" value was in newick the "| grep -v "e-0" " cleans it out
-    tr ":" "\n" < tableinput.${d} | tr "," "\n" | sed 's/(//g' | sed 's/)//g' | grep -v "\.[0-9]*" | grep -v "e-0" | grep -v "root" > cleanedAlignment.txt
-    # Place headers onto aligned file
-    { echo "reference_call"; cat cleanedAlignment.txt; } > cleanedAlignment.txt.temp; mv cleanedAlignment.txt{.temp,}
-    { echo "reference_pos"; cat cleanedAlignment.txt; } > cleanedAlignment.txt.temp; mv cleanedAlignment.txt{.temp,}
+function add_mapping_values_sorted () {
 
-    cp ../${d}.table.txt ./
-
-    ########
-    touch ${d}.organized_table.txt
-    ls ${dircalled}/snpTableSorter.pl
-
-    ${dircalled}/snpTableSorter.pl ${d}.table.txt cleanedAlignment.txt ${d}.organized_table.txt
-    ########
-
-    rm ${d}.table.txt
-    mv ${d}.organized_table.txt ../
-    cd ..
-
-    # Add map qualities to sorted table
-
-    #n Get just the position.  The chromosome must be removed
-    awk ' NR == 1 {print $0}' ${d}.organized_table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
-
-    printf "reference_pos\tmap-quality\n" > quality.txt
-    echo "`date` --> Organized table map quality gathering for $d"
-
-    if [ "$doing_allvcf" == "doing_allvcf" ]; then
-        # Done doing its job, reset, we don't want to run all thread in group tables
-        doing_allvcf="dadada"
-        # run all threads
-         echo "parallel running..."
-        cat $d.positions | parallel 'export positionnumber=$(echo {} | awk '"'"'{print $2}'"'"'); export front=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\1/'"'"'); export back=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\2/'"'"'); export avemap=$(awk -v f=$front -v b=$back '"'"'$6 != "." && $1 == f && $2 == b {print $8}'"'"' ./starting_files/*vcf | sed '"'"'s/.*MQ=\(.....\).*/\1/'"'"' | awk '"'"'{ sum += $1; n++ } END { if (n > 0) print sum / n; }'"'"' | sed '"'"'s/\..*//'"'"'); printf "$positionnumber\t$avemap\n" >> quality.txt' &> /dev/null
-    else
-        echo "parallel running..."
-        cat $d.positions | parallel --jobs 10 'export positionnumber=$(echo {} | awk '"'"'{print $2}'"'"'); export front=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\1/'"'"'); export back=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\2/'"'"'); export avemap=$(awk -v f=$front -v b=$back '"'"'$6 != "." && $1 == f && $2 == b {print $8}'"'"' ./starting_files/*vcf | sed '"'"'s/.*MQ=\(.....\).*/\1/'"'"' | awk '"'"'{ sum += $1; n++ } END { if (n > 0) print sum / n; }'"'"' | sed '"'"'s/\..*//'"'"'); printf "$positionnumber\t$avemap\n" >> quality.txt' &> /dev/null
-    sleep 60
-    fi
-
-    echo "parallel done running"
-
-    function add_mapping_values_sorted () {
-
-    # Create "here-document" to prevent a dependent file.
+# Create "here-document" to prevent a dependent file.
 cat >./$d.mapvalues.py <<EOL
 #!/usr/bin/env python
 
@@ -1779,77 +1258,75 @@ mytable.to_csv("$d.finished_table.txt", sep="\t", index_label='reference_pos')
 
 EOL
 
-    chmod 755 ./$d.mapvalues.py
+chmod 755 ./$d.mapvalues.py
 
-    }
+}
 
-    add_mapping_values_sorted
-    sleep 5
+add_mapping_values_sorted
+sleep 5
 
-    ./$d.mapvalues.py ${d}.table.txt quality.txt
+./$d.mapvalues.py ${d}.table.txt quality.txt
+mv $d.finished_table.txt ${d}.table.txt
+
+./$d.mapvalues.py ${d}.organized_table.txt quality.txt
+mv $d.finished_table.txt ${d}.organized_table.txt
+rm quality.txt
+
+# When multiple tables are being done decrease cpus being used
+if [[ -z $gbk_file ]]; then
+       printf "\n\n\t There is not a gbk file to annotate tables \n\n"
+else
+    # Position with annotation made at line: 2090
+    # All positions in single file, "${dircalled}/each_annotation_in"
+    # Inner merge of this file to all tables
+    # Add annoations to tables
+
+    ./$d.mapvalues.py ${d}.table.txt ${dircalled}/each_annotation_in
+    # Rename output tables back to original names
     mv $d.finished_table.txt ${d}.table.txt
 
-    ./$d.mapvalues.py ${d}.organized_table.txt quality.txt
-    mv $d.finished_table.txt ${d}.organized_table.txt
-    rm quality.txt
+    ./$d.mapvalues.py $d.organized_table.txt ${dircalled}/each_annotation_in
+    # Rename output tables back to original names
+    mv $d.finished_table.txt $d.organized_table.txt
 
-    # When multiple tables are being done decrease cpus being used
-    if [[ -z $gbk_file ]]; then
-           printf "\n\n\t There is not a gbk file to annotate tables \n\n"
-    else
-        # Position with annotation made at line: 2090
-        # All positions in single file, "${dircalled}/each_annotation_in"
-        # Inner merge of this file to all tables
-        # Add annoations to tables
-
-        ./$d.mapvalues.py ${d}.table.txt ${dircalled}/each_annotation_in
-        # Rename output tables back to original names
-        mv $d.finished_table.txt ${d}.table.txt
-
-        ./$d.mapvalues.py $d.organized_table.txt ${dircalled}/each_annotation_in
-        # Rename output tables back to original names
-        mv $d.finished_table.txt $d.organized_table.txt
-
-        rm $d.positions
-        rm $d.mapvalues.py
-        rm $d.transposed_table.txt
-    fi
-
-    wait
-    sleep 2
-    # rename table to be more descriptive.
-    mv ${d}.table.txt ${d}.position_ordered_table.txt
-
-    # if no gbk for annotation tack a row to bottom of table so xlsxwriter has the proper row count for formating
-    # row needs to be complete for all columns
-    if [[ -z $gbk_file ]]; then
-        echo "No_gbk_available_for_annotation" >> ${d}.position_ordered_table.txt
-        max=$(awk 'max < NF { max = NF } END { print max }' ${d}.position_ordered_table.txt)
-        awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}.position_ordered_table.txt > ${d}.position_ordered_table.temp
-        mv ${d}.position_ordered_table.temp ${d}.position_ordered_table.txt
-        echo "No_gbk_available_for_annotation" >> ${d}.organized_table.txt
-        max=$(awk 'max < NF { max = NF } END { print max }' ${d}.organized_table.txt)
-        awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}.organized_table.txt > ${d}.organized_table.temp
-        mv ${d}.organized_table.temp ${d}.organized_table.txt
-
-    fi
-
-        # write tables to excel
-
-    pwd 
-
-    nexus_tree_convert.sh RAxML*tre
-    for i in `cat ${root}/recentfiles`; do perl -i -pe "s/$i\$/\t${i}\[\&\!color=\#ff0000\]/" RAxML*.nex; done
-    rm RAxML*tre
-
-    ${root}/excelwriter.py ${d}.organized_table.txt
-    rm ${d}.organized_table.txt
-    ${root}/excelwriter.py ${d}.position_ordered_table.txt
-    rm ${d}.position_ordered_table.txt
-else
-    echo "Table not organized ${position_count} positions"
-    echo "Table not organized ${position_count} positions" > ../Oversized_organized_table_not_made
+    rm $d.positions
+    rm $d.mapvalues.py
+    rm $d.transposed_table.txt
 fi
+
+wait
+sleep 2
+# rename table to be more descriptive.
+mv ${d}.table.txt ${d}.position_ordered_table.txt
+
+# if no gbk for annotation tack a row to bottom of table so xlsxwriter has the proper row count for formating
+# row needs to be complete for all columns
+if [[ -z $gbk_file ]]; then
+    echo "No_gbk_available_for_annotation" >> ${d}.position_ordered_table.txt
+    max=$(awk 'max < NF { max = NF } END { print max }' ${d}.position_ordered_table.txt)
+    awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}.position_ordered_table.txt > ${d}.position_ordered_table.temp
+    mv ${d}.position_ordered_table.temp ${d}.position_ordered_table.txt
+    echo "No_gbk_available_for_annotation" >> ${d}.organized_table.txt
+    max=$(awk 'max < NF { max = NF } END { print max }' ${d}.organized_table.txt)
+    awk -v max=$max 'BEGIN{OFS="\t"}{ for(i=NF+1; i<=max; i++) $i = ""; print }' ${d}.organized_table.txt > ${d}.organized_table.temp
+    mv ${d}.organized_table.temp ${d}.organized_table.txt
+
+fi
+
+    # write tables to excel
+
+pwd 
+pause
+
+nexus_tree_convert.sh RAxML*tre
+for i in `cat ${root}/recentfiles`; do perl -i -pe "s/$i\$/\t${i}\[\&\!color=\#ff0000\]/" RAxML*.nex; done
+rm RAxML*tre
+
+${root}/excelwriter.py ${d}.organized_table.txt
+rm ${d}.organized_table.txt
+${root}/excelwriter.py ${d}.position_ordered_table.txt
+rm ${d}.position_ordered_table.txt
+
 }
 
 #################################################################################
@@ -1988,181 +1465,35 @@ done
 wait
 #################################################################################
 
-# Count the number of chromosomes used in the reference when VCFs were made.
-#singleFile=`ls *.vcf | head -1`
-echo "Counting the number of chromosomes in first 100 samples, started -->  `date`"
-chromCount=`awk ' $0 !~ /^#/ {print $1}' $(ls *vcf | head -100) | sort | uniq -d | awk 'END {print NR}'`
-echo "The number of chromosomes/segments seen in VCF: $chromCount"
-awk ' $0 !~ /^#/ {print $1}' $(ls *vcf | head -100) | sort | uniq -d > chroms
-echo "These are the chromosomes/segments found:"
-cat chroms
-########################################################################
-
 AConeCallPosition
 wait
 
-# Change low QUAL SNPs to N, see set variables
-changeLowCalls
-wait
-
-######################## Change AC1s to IUPAC ########################
-
-echo "Changing AC=1 to IUPAC, started -->  `date`"
-
-for i in *vcf; do
-
-(awk -v qual=${QUAL} '
-
-BEGIN { OFS = "\t"}
-
-{ if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /AG/ )
-	 	print $1, $2, $3, $4, "R", $6, $7, $8, $9, $10
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /CT/ )
-	 	print $1, $2, $3, $4, "Y", $6, $7, $8, $9, $10
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /GC/ )
-	 	print $1, $2, $3, $4, "S", $6, $7, $8, $9, $10
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /AT/ )
-	 	print $1, $2, $3, $4, "W", $6, $7, $8, $9, $10
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /GT/ )
-	 	print $1, $2, $3, $4, "K", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /AC/ )
-	 	print $1, $2, $3, $4, "M", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /GA/ )
-	 	print $1, $2, $3, $4, "R", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /TC/ )
-	 	print $1, $2, $3, $4, "Y", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /CG/ )
-	 	print $1, $2, $3, $4, "S", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /TA/ )
-	 	print $1, $2, $3, $4, "W", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /TG/ )
-	 	print $1, $2, $3, $4, "K", $6, $7, $8, $9, $10	 	
-else if ($6 > qual && $8 ~ /^AC=1;/ && $4$5 ~ /CA/ )
-	 	print $1, $2, $3, $4, "M", $6, $7, $8, $9, $10	 	
-else
-	print $0	 
-}' $i > ${i%vcf}temp
-mv ${i%vcf}temp $i) &
-    let count+=1
-    [[ $((count%NR_CPUS)) -eq 0 ]] && wait
-done
-wait
-######################## Mark Files and Remove Marked Regions ########################
-echo "chromCount:  $chromCount"
-
-if [ $FilterAllVCFs == yes ]; then
-echo "`date` --> Marking VCFs and removing filtered regions"
-	# Label filter field for positions to be filtered in all VCFs
-        if [ $((chromCount)) -eq 1 ]; then
-        for i in *.vcf; do
-        (m=`basename "$i"`; n=`echo $m | sed $dropEXT`
-        # Get usable positions in the VCF
-        awk '$1 !~ /#/ && $10 !~ /\.\/\./ {print $2}' $i > $i.file
-        # Combine with positions that will be filtered
-        cat "${FilterDirectory}/FilterToAll.txt" $i.file >> $i.catFile
-        
-	# Output any duplicate positions, aka decreasing positions to be marked and used by awk
-        cat $i.catFile | sort | uniq -d > $i.txt
-        # preparing postions
-        pos=`cat $i.txt | tr "\n" "W" | sed 's/W/\$\|\^/g' | sed 's/\$\|\^$//' | sed 's/$/\$/' | sed 's/^/\^/' | sed 's/|$$//'`
-	
-	# If no positions found to be filtered a filler is needed or all positions will get marked as "Not_Included"
-	if [ -z $pos ]; then
-		pos="100000000"
-	fi
-
-	# Making a vcf with positions marked that should not be included based on filter file
-        awk -v x=$pos 'BEGIN {FS="\t"; OFS="\t"} { if($2 ~ x ) print $1, $2, $3, $4, $5, $6, "Not_Included", $8, $9, $10; else print $0}' $i > $n.filtered.vcf
-        # Clean up
-
-        rm $i.file; rm $i.catFile; rm $i.txt
-	# Removed positions and clobber origingal vcf
-	grep -v "Not_Included" $n.filtered.vcf > $i) &
-	let count+=1
-	[[ $((count%NR_CPUS)) -eq 0 ]] && wait
-	done
-	wait
-
-	elif [ $((chromCount)) -gt 1 ]; then
-		#echo "multiple chromosomes"
-		for i in *.vcf; do m=`basename "$i"`; n=`echo $m | sed $dropEXT` # n is name with all right of "_" and "." removed.
-		grep '^#' $i > ${i}.header
-		grep -v '^#' $i > ${i}.body
-		#Mark vcf allowing areas of the genome to be removed from the SNP analysis
-		# Iterate through chrom number range
-		COUNTER=0
-		for c in `cat chroms`; do
-			let COUNTER=COUNTER+1
-			#echo The counter is $COUNTER
-			#echo "********* In all_vcfs $n working on chromos $c **********"
-			awk -v c=$c 'BEGIN{OFS="\t"} $1 !~ /#/ && $10 !~ /\.\/\./ && $1 == c {print $2}' ${i}.body > $i.filepositions
-			awk -v c=$c ' $1 == c {print $2}' ${FilterDirectory}/FilterToAll.txt > $i.positionstofilter
-			cat $i.positionstofilter $i.filepositions | sort -k1,1 | uniq -d > $i.foundpositions
-			pos=`cat $i.foundpositions | tr "\n" "W" | sed 's/W/\$\|\^/g' | sed 's/\$\|\^$//' | sed 's/$/\$/' | sed 's/^/\^/' | sed 's/|$$//'`
-			if [[ -n $pos ]]; then
-				echo "pos: $pos" > /dev/null 2>&1
-			else
-				#echo "string is zero; no findings for pos; giving pos=1"
-				pos="^1$"
-				#echo $pos
-			fi
-			awk -v var1=$c -v var2=$pos 'BEGIN {FS="\t"; OFS="\t"} { if($1 ~ var1 && $2 ~ var2) print $1, $2, $3, $4, $5, $6, "Not_Included", $8, $9, $10; else print $0}' ${i}.body | grep "$c" > $n.filterchrom${COUNTER}.vcf
-		done
-			cat ${i}.header $n.filterchrom*.vcf > $n.filtered.vcf
-			grep -v "Not_Included" $n.filtered.vcf > $i
-			rm ${i}.header
-			rm ${i}.body
-			rm $i.filepositions
-			rm $i.positionstofilter
-			rm $n.filterchrom*.vcf
-			rm $i.foundpositions
-		done
-		else
-		echo "Check chromosome count numbers at line $LINENO.  Exiting script."
-		exit 1
-	fi
-
-wait
-sleep 2
-
-rm *.filtered.vcf 
-
-    else
-    echo "***All VCF filtering was NOT done."
-    echo "***All VCF filtering was NOT done." >> section5
-fi
-
 #################### Categorize VCFs into Groups, Subgroups and Clades #####################
-
-# Print header
-#    printf "%10s %10s %10s %10s\n" "Isolate" "Group" "Subgroup" "Clade" >> log
 
 echo "" > section3
 echo "NAME GROUP SUBGROUP CLADE" >> section3
 echo "" >> section3
 
-if [ $((chromCount)) -eq 1 ]; then
-    neg_grp_pos=`grep "!" "${DefiningSNPs}" | grep "Group" | awk '{print $2}'`
-    grp_number=`grep "!" "${DefiningSNPs}" | grep "Group" | awk '{print $1}'`
-    echo "Looking for inverted positions"
-    if [[ -n $neg_grp_pos ]]; then
-        for i in *vcf; do
-            # get vcfs without position listed for group
-            # Defining SNPs is indicated as inverted number search by "!"
-            #echo "neg_grp_pos: $neg_grp_pos grp_number: $grp_number"
-            mkdir -p ./Group-${grp_number}
-            findings=$(awk ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ {print $2}' $i | grep "$neg_grp_pos")
-            if [[ -z $findings ]]; then
-                #echo "$i does not have $position"
-                cp $i ./Group-${grp_number}
-                # Also move to all_vcfs
-                mkdir -p all_vcfs #Make all_vcfs folder if one does not exist.
-                mv $i ./all_vcfs/
-                findings=""
-                echo "${i%.vcf} in_negative_search_Group-${grp_number}" >> section3
-            fi
-        done
-    fi
+neg_grp_pos=`grep "!" "${DefiningSNPs}" | grep "Group" | awk '{print $2}'`
+grp_number=`grep "!" "${DefiningSNPs}" | grep "Group" | awk '{print $1}'`
+echo "Looking for inverted positions"
+if [[ -n $neg_grp_pos ]]; then
+    for i in *vcf; do
+        # get vcfs without position listed for group
+        # Defining SNPs is indicated as inverted number search by "!"
+        #echo "neg_grp_pos: $neg_grp_pos grp_number: $grp_number"
+        mkdir -p ./Group-${grp_number}
+        findings=$(awk ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/  || /;AC=2;/ {print $2}' $i | grep "$neg_grp_pos")
+        if [[ -z $findings ]]; then
+            #echo "$i does not have $position"
+            cp $i ./Group-${grp_number}
+            # Also move to all_vcfs
+            mkdir -p all_vcfs #Make all_vcfs folder if one does not exist.
+            mv $i ./all_vcfs/
+            findings=""
+            echo "${i%.vcf} in_negative_search_Group-${grp_number}" >> section3
+        fi
+    done
 fi
 
 for i in *.vcf; do
@@ -2170,10 +1501,10 @@ for i in *.vcf; do
 	# If there is one chromosome present just get the position.  If multiple chromosomes are present than the chromsome identification needs to be identified.  The filter file needs to sync with this chromosome identification.  If multiple chromosomes the filter file will be kept as a text file.  If a single chromosome an linked Excel file can be used.
 	if [ $((chromCount)) -eq 1 ]; then
 		# Get quality positions in VCF
-		awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/{print $2}' $i > quality-${i%.vcf}
+		awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ || /;AC=2;/ {print $2}' $i > quality-${i%.vcf}
 		else
 		# Get quality positions in VCF and include chromosome identification
-		awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ {print $1 "-" $2}' $i > quality-${i%.vcf}
+		awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/  || /;AC=2;/ {print $1 "-" $2}' $i > quality-${i%.vcf}
 	fi
 
 	echo "quality-${i%.vcf}:"
@@ -2301,177 +1632,26 @@ mv ./Clade*/ ./all_clades/
 ##################### Start: All vcf folder #####################
 function all_vcfs () {
 
-cd ./all_vcfs/
-d="all_vcfs"
+#Arguments
+    #filterfile directory
+    #current group being worked on
+echo "Filterdirectoy ${filterdir}"
+echo "group ${d}"
+pwd
+pause
 
-mkdir starting_files
-cp *vcf starting_files
+/Users/tstuber/workspace/stuber/python_scripts/script2_all_intergrate.py ${filterdir} ${d}
 
-# Make concatemer with the position and REF call.
-# Factor in possible multiple chromosomes
-# Get rid of duplicates in concatemer and list all the positions and REF calls
-echo "`date` --> Gathering SNP positions"
-
-for i in *.vcf; do
-	awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ {print $1 "-" $2, $4}' $i >> concatemer
-done
-
-# Get rid of duplicates in concatemer and list all the positions and REF calls
-sort -k1,1 < concatemer | uniq > filtered_total_alt
-awk '{print $1}' filtered_total_alt > filtered_total_pos
-
-# Count the number of SNPs
-totalSNPs=`wc -l  filtered_total_pos`
-echo "Total filtered SNPs: $totalSNPs"
-
-for i in *.vcf; do
-	(n=${i%.vcf}
-	awk -v Q="$QUAL" ' $0 !~ /^#/ && $6 > Q && $8 ~ /^AC=2;/ {print $1 "-" $2, $5}' $i > $n.allsnps_alt
-	#get SNPs of interest
-	fgrep -f filtered_total_pos $n.allsnps_alt > $n.targetsnps_alt
-	#if SNP not found in sample default call to reference, normalize.
-	cat $n.targetsnps_alt filtered_total_alt | awk '{ if (a[$1]++ == 0) print $0; }' |  sort -nk1,1 > $n.filteredsnps_alt
-
-	# If position has zero map quality change alt call to -
-	# get positions being used
-	awk '{print $1}' $n.filteredsnps_alt > $n.filteredsnps_pos
-	# Get zero coverage positions.
-	awk ' $0 !~ /^#/ && $10 ~ /\.\/\./ {print $1 "-" $2}' ${i} > ${n}.zeropositions
-
-	# if duplicate then zero mapped position found for sample
-	cat $n.filteredsnps_pos ${n}.zeropositions | sort | uniq -d | awk '{print $1, "-"}' > ${n}.zerotomerge_alt #the - makes it and alt file
-
-	#if zero positions found merge them to the SNPs found
-	if [ -s ${n}.zerotomerge_alt ]; then
-		# merge zero updates to SNP file
-		cat ${n}.zerotomerge_alt $n.filteredsnps_alt | awk '{ if (a[$1]++ == 0) print $0; }' | sort -nk1,1 > ${n}.zerofilteredsnps_alt
-		#echo "***Found zero postions: $n"
-		rm $n.filteredsnps_alt
-	else
-		#echo "no zero positions found for $n"
-		mv $n.filteredsnps_alt ${n}.zerofilteredsnps_alt
-	fi
-
-	rm $n.allsnps_alt
-	rm $n.filteredsnps_pos
-	rm $n.targetsnps_alt
-	rm ${n}.zeropositions
-	rm ${n}.zerotomerge_alt)  &
-	let count+=1
-	[[ $((count%NR_CPUS)) -eq 0 ]] && wait
-done
-wait
-sleep 5
-wait
-
-echo "`date` --> Finding parsimony informative positions"
-# Capture only positions that have more than one SNP type called at a position
-cat *zerofilteredsnps_alt | sort -nk1,1 | uniq | awk '{print $1}' | uniq -d > parsimony_informative
-# This removes calls that are the same for all isolates being analyzed
-# If many SNPs fgrep may not do much and be slow
-fgrep -f parsimony_informative filtered_total_alt | sort -k1,1n > parsimony_filtered_total_alt
-awk '{print $1}' parsimony_filtered_total_alt > parsimony_filtered_total_pos
-######################## FILTER FILE CREATOR ###########################
-if [ "$cflag" ]; then
-	d="all_vcfs"
-	findpositionstofilter
-fi
-#########################################################################
-
-# Create table and fasta
-awk '{print $1}' parsimony_filtered_total_alt | awk 'BEGIN{print "reference_pos"}1' | tr '\n' '\t' | sed 's/$//' | awk '{print $0}' >> ${d}.table.txt
-
-###
-# Getting annoations
-awk '{print $1}' parsimony_filtered_total_alt | sed 's/$//' >> ${dircalled}/each_vcf-poslist.txt
-
-if [[ -z $gbk_file ]]; then
-    echo "No gbk file"
-else
-    get_annotation
-fi
-###
-
-awk '{print $2}' parsimony_filtered_total_alt | awk 'BEGIN{print "reference_call"}1' | tr '\n' '\t' | sed 's/$//' | awk '{print $0}' >> ${d}.table.txt
-
-for i in *zerofilteredsnps_alt; do
-#	(
-m=`basename "$i"`; n=`echo $m | sed 's/\..*//'`
-
-	fgrep -f parsimony_filtered_total_pos $i | sort -k1,1n > $n.pretod
-
-	##############################################################
-	# Change AC1s to IUPAC
-
-	# get positions being used
-	awk '{print $1}' ${n}.pretod > ${n}.usedpostions
-	# get AC1 positions and iupac calls  that were changed to iupac
-	awk -v Q="$QUAL" ' $0 !~ /#/ && $6 > Q && $8 ~ /^AC=1;/ {print $1 "-" $2, $5}' ${i%zerofilteredsnps_alt}vcf > ${n}.ac
-	# get just positions of those AC1 grabbed above
-	awk '{print $1}' ${n}.ac > ${n}.acpositions
-	# AC duplicate positions will need to be kept
-	cat ${n}.usedpostions ${n}.acpositions | sort | uniq -d > ${n}.actokeep
-	# get AC1 position with iupac, these are only positions already in the pretod
-
-	if [ -s ${n}.actokeep ]; then
-		fgrep -f ${n}.actokeep ${n}.ac > ${n}.actomerge
-		# merge iupac updates to filledcut
-		cat ${n}.actomerge $n.pretod | awk '{ if (a[$1]++ == 0) print $0; }' | sort -nk1,1 > $n.tod
-		rm ${n}.pretod
-		rm ${n}.actomerge
-	else
-		#echo "else done"
-		mv $n.pretod $n.tod
-	fi
-	rm ${n}.usedpostions
-	rm ${n}.ac
-	rm ${n}.acpositions
-	rm ${n}.actokeep
-	##############################################################
-
-	awk '{print $2}' $n.tod | tr -d [:space:] | sed "s/^/>$n;/" | tr ";" "\n" | sed 's/[A-Z],[A-Z]/N/g' > $n.fas
-	# Add each isolate to the table
-	awk '{print $2}' $n.tod | awk -v number="$n" 'BEGIN{print number}1' | tr '\n' '\t' | sed 's/$//' | awk '{print $0}' >> ${d}.table.txt #) &
-	#let count+=1
-	#[[ $((count%NR_CPUS)) -eq 0 ]] && wait
-done
-
-wait
-sleep 5
-
-#Create root sequence
-awk '{print $2}' parsimony_filtered_total_alt > root
-cat root | tr -cd "[:print:]" | sed "s/^/>root;/" | tr ";" "\n" | sed 's/[A-Z],[A-Z]/N/g' > root.fas
-echo "" >> root.fas
-
-totalSNPs=`grep -c ".*" parsimony_filtered_total_pos`
-echo "Total informative SNPs: $totalSNPs"
-
-# Make a file containing all fasta files. Used awk instead of cat to insure newline between files
-
-awk '{print $0}' *.fas > ${d}_alignment.fasta
-
-#Clean-up
-rm concatemer
-rm *.tod
-mkdir fasta
-mv *.fas ./fasta
-rm root
-rm *vcf
-rm filtered_total_alt
-rm filtered_total_pos
-rm parsimony_filtered_total_alt
-rm parsimony_filtered_total_pos
-rm parsimony_informative
-rm *zerofilteredsnps_alt
 }
 
 # if doing a single tree run RAxML with multiple threads
-pthreads="no"
+pwd
+pause
+
 if [ "$eflag" -o "$aflag" ]; then
     doing_allvcf="doing_allvcf"    
     all_vcfs
-	d="all_vcfs"
+	d="FilterToAll"
     cd ./fasta
     pthreads="yes"
     alignTable
@@ -2487,21 +1667,21 @@ fi
 #echo "***************************************************"
 # Change directory to all_groups
 cd ${fulDir}/all_groups
-fasta_table &
+fasta_table
 
 #echo "***************************************************"
 #echo "**************** STARTING SUBGROUPS ***************"
 #echo "***************************************************"
 # Change directory to all_subgroups
 cd ${fulDir}/all_subgroups
-fasta_table &
+fasta_table
 
 #echo "***************************************************"
 #echo "***************** STARTING CLADES *****************"
 #echo "***************************************************"
 # Change directory to all_clades
 cd ${fulDir}/all_clades
-fasta_table &
+fasta_table
 wait
 echo "At line $LINENO, sleeping 5 second"; sleep 5s
 
@@ -2537,108 +1717,9 @@ sleep 2
 
 cp "$0" "$PWD"
 
-echo "sleeping for 10 seconds before starting table sorting"
-sleep 10
-
-#echo "***************************************************"
-#echo "********** STARTING all_groups Alignment **********"
-#echo "***************************************************"
-cd ${fulDir}/all_groups
-
-workingdir=`basename $PWD`
-
-if [ $workingdir == all_groups ]
-then
-directories=`ls`
-for d in $directories; do
-    cd ${fulDir}/all_groups/${d}/fasta
-    #echo "****************************************************"
-    #echo "************* Orginizing Table: $d *****************"
-    #echo "****************************************************"
-    alignTable & 
-    pwd 
-done
-
-else
-echo "*** $workingdir not found ***"
-fi
-#wait
-
-if [[ $vcfcount -le 200 ]]; then 
-    date
-    echo "sleeping for 10 seconds..."
-    sleep 10
-elif [[ $vcfcount -le 1000 ]]; then
-    date
-    echo "sleeping for 120 seconds..."
-    sleep 120
-else
-    date
-    echo "sleeping for 480 seconds..."
-    sleep 480
-fi
-
-#echo "***************************************************"
-#echo "********** STARTING all_subgroups Alignment **********"
-#echo "***************************************************"
-cd ${fulDir}/all_subgroups
-
-workingdir=`basename $PWD`
-
-if [ $workingdir == all_subgroups ]
-then
-directories=`ls`
-for d in $directories; do
-    cd ${fulDir}/all_subgroups/${d}/fasta
-    #echo "****************************************************"
-    #echo "************* Orginizing Table: $d *****************"
-    #echo "****************************************************"
-    alignTable & 
 pwd
-done
-else
-echo "*** $workingdir not found ***"
-fi
-#wait
+pause
 
-if [[ $vcfcount -le 200 ]]; then
-    date
-    echo "sleeping for 10 seconds..."
-    sleep 10
-elif [[ $vcfcount -le 1000 ]]; then
-    date
-    echo "sleeping for 120 seconds..."
-    sleep 120
-else
-    date
-    echo "sleeping for 480 seconds..."
-    sleep 420
-fi  
-
-#echo "***************************************************"
-#echo "******** STARTING all_clades Alignment *********"
-#echo "***************************************************"
-cd ${fulDir}/all_clades
-
-workingdir=`basename $PWD`
-
-if [ $workingdir == all_clades ]
-then
-
-directories=`ls`
-for d in $directories; do
-    cd ${fulDir}/all_clades/$d/fasta
-    #echo "****************************************************"
-    #echo "************* Orginizing Table: $d *****************"
-    #echo "****************************************************"
-    alignTable & 
-pwd
-done
-else
-echo "*** $workingdir not found ***"
-fi
-wait
-pwd
 cd ${fulDir}
 
 column section1 > csection1
@@ -2740,16 +1821,16 @@ rm ${fulDir}/each_vcf-poslist.txt
 rm ${fulDir}/each_annotation_in
 rm ${root}/excelwriter.py
 
-echo "Copy to ${bioinfoVCF}"
-cp -r $PWD ${bioinfoVCF}
-fileName=`basename $0`
-
-if [ "$mflag" ]; then
-    email_list="Tod.P.Stuber@aphis.usda.gov"
-	echo "vcftofasta.sh completed" > mytempfile; cat mytempfile | mutt -s "vcftofasta.sh completed subject" -a email_log.html -- $email_list
-	else
-	echo "$fileName $@ completed, See attachment" > mytempfile; cat mytempfile | mutt -s "$fileName $@ completed" -a email_log.html -- $email_list
-fi
+#echo "Copy to ${bioinfoVCF}"
+#cp -r $PWD ${bioinfoVCF}
+#fileName=`basename $0`
+#
+#if [ "$mflag" ]; then
+#    email_list="Tod.P.Stuber@aphis.usda.gov"
+#	echo "vcftofasta.sh completed" > mytempfile; cat mytempfile | mutt -s "vcftofasta.sh completed subject" -a email_log.html -- $email_list
+#	else
+#	echo "$fileName $@ completed, See attachment" > mytempfile; cat mytempfile | mutt -s "$fileName $@ completed" -a email_log.html -- $email_list
+#fi
 rm mytempfile
 rm email_log.html
 
