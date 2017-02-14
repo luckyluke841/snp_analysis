@@ -1190,7 +1190,6 @@ for d in $directories; do
     echo "Filterdirectoy ${filterdir}"
     echo "group ${d}"
     pwd
-    pause
 
     script2_all_intergrate.py ${filterdir} ${d}
     sed 's/\(.*\)_\([0-9]*\)$/\1-\2/' < each_vcf-poslist.txt > each_vcf-poslist.temp; mv each_vcf-poslist.temp each_vcf-poslist.txt
@@ -1202,19 +1201,53 @@ for d in $directories; do
         if [ "$eflag" -o "$aflag" ]; then
             echo "${dircalled}/each_vcf-poslist.txt already complete, skipping"
         else
-            get_annotation
+            echo ""
+            #get_annotation
         fi
     fi
-    pause
-    alignTable
-    pause
+    #alignTable
 done
 }
 #****************************************************************
 function alignTable () {
 pwd
 echo "d: $d"
-puase
+
+# Create "here-document" to prevent a dependent file.
+cat >./$d.mapvalues.py <<EOL
+#!/usr/bin/env python
+
+import pandas as pd
+import numpy as np
+from sys import argv
+
+# infile arg used to make compatible for both sorted and organized tables
+script, infile, inquality = argv
+
+quality = pd.read_csv(inquality, sep='\t')
+mytable = pd.read_csv(infile, sep='\t')
+
+# set index to "reference_pos" so generic index does not transpose
+mytable = mytable.set_index('reference_pos')
+mytable = mytable.transpose()
+
+# write to csv to import back with generic index again
+# seems like a hack that can be done better
+mytable.to_csv("$d.transposed_table.txt", sep="\t", index_label='reference_pos')
+
+# can't merge on index but this newly imported transpose is formated correctly
+mytable = pd.read_csv('$d.transposed_table.txt', sep='\t')
+mytable = mytable.merge(quality, on='reference_pos', how='inner')
+
+# set index to "reference_pos" so generic index does not transpose 
+mytable = mytable.set_index('reference_pos')
+mytable = mytable.transpose()
+# since "reference_pos" was set as index it needs to be explicitly written into csv
+mytable.to_csv("$d.finished_table.txt", sep="\t", index_label='reference_pos')
+
+EOL
+
+chmod 755 ./$d.mapvalues.py
 
 # When multiple tables are being done decrease cpus being used
 if [[ -z $gbk_file ]]; then
@@ -1260,7 +1293,6 @@ fi
     # write tables to excel
 
 pwd 
-pause
 
 nexus_tree_convert.sh RAxML*tre
 for i in `cat ${root}/recentfiles`; do perl -i -pe "s/$i\$/\t${i}\[\&\!color=\#ff0000\]/" RAxML*.nex; done
@@ -1576,17 +1608,19 @@ function all_vcfs () {
     #filterfile directory
     #current group being worked on
 
+pwd
 echo "filterdir $filterdir"
 echo "d: $d"
 
 script2_all_intergrate.py ${filterdir} ${d}
-pause
+
 sed 's/\(.*\)_\([0-9]*\)$/\1-\2/' < each_vcf-poslist.txt > each_vcf-poslist.temp; mv each_vcf-poslist.temp each_vcf-poslist.txt
 mv each_vcf-poslist.txt ${root}
 if [[ -z $gbk_file ]]; then
     echo "No gbk file"
 else
-    get_annotation
+   echo ""
+    #get_annotation
 fi
 
 }
@@ -1599,8 +1633,7 @@ if [ "$eflag" -o "$aflag" ]; then
     cd ./all_vcfs
     all_vcfs
     pthreads="yes"
-    alignTable
-    pause
+    #alignTable
 else
 	echo "not ran" > all_vcfs/not_ran
     echo "Tree not ran for all_vcfs"
@@ -1613,21 +1646,21 @@ fi
 #echo "***************************************************"
 # Change directory to all_groups
 cd ${fulDir}/all_groups
-fasta_table
+fasta_table &
 
 #echo "***************************************************"
 #echo "**************** STARTING SUBGROUPS ***************"
 #echo "***************************************************"
 # Change directory to all_subgroups
 cd ${fulDir}/all_subgroups
-fasta_table
+fasta_table &
 
 #echo "***************************************************"
 #echo "***************** STARTING CLADES *****************"
 #echo "***************************************************"
 # Change directory to all_clades
 cd ${fulDir}/all_clades
-fasta_table
+fasta_table &
 wait
 echo "At line $LINENO, sleeping 5 second"; sleep 5s
 
@@ -1647,7 +1680,6 @@ sleep 2
 cp "$0" "$PWD"
 
 pwd
-pause
 
 cd ${fulDir}
 
