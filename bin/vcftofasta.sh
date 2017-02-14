@@ -1214,81 +1214,7 @@ done
 function alignTable () {
 pwd
 echo "d: $d"
-
-# Add map qualities to sorted table
-
-#n Get just the position.  The chromosome must be removed
-#awk ' NR == 1 {print $0}' ${d}-organized-table.txt | tr "\t" "\n" | sed "1d" | awk '{print NR, $0}' > $d.positions
-cat ${root}/each_vcf-poslist.txt > $d.positions
-printf "reference_pos\tmap-quality\n" > quality.txt
-echo "`date` --> Organized table map quality gathering for $d"
-
-if [ "$doing_allvcf" == "doing_allvcf" ]; then
-    # Done doing its job, reset, we don't want to run all thread in group tables
-    doing_allvcf="dadada"
-    # run all threads
-     echo "parallel running..."
-    cat $d.positions | parallel 'export positionnumber=$(echo {} | awk '"'"'{print $2}'"'"'); export front=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\1/'"'"'); export back=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\2/'"'"'); export avemap=$(awk -v f=$front -v b=$back '"'"'$6 != "." && $1 == f && $2 == b {print $8}'"'"' ./starting_files/*vcf | sed '"'"'s/.*MQ=\(.....\).*/\1/'"'"' | awk '"'"'{ sum += $1; n++ } END { if (n > 0) print sum / n; }'"'"' | sed '"'"'s/\..*//'"'"'); printf "$positionnumber\t$avemap\n" >> quality.txt' &> /dev/null
-else
-    echo "parallel running..."
-    cat $d.positions | parallel --jobs 10 'export positionnumber=$(echo {} | awk '"'"'{print $2}'"'"'); export front=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\1/'"'"'); export back=$(echo {} | awk '"'"'{print $2}'"'"' | sed '"'"'s/\(.*\)-\([0-9]*\)/\2/'"'"'); export avemap=$(awk -v f=$front -v b=$back '"'"'$6 != "." && $1 == f && $2 == b {print $8}'"'"' ./starting_files/*vcf | sed '"'"'s/.*MQ=\(.....\).*/\1/'"'"' | awk '"'"'{ sum += $1; n++ } END { if (n > 0) print sum / n; }'"'"' | sed '"'"'s/\..*//'"'"'); printf "$positionnumber\t$avemap\n" >> quality.txt' &> /dev/null
-sleep 60
-fi
-
-echo "parallel done running"
-
-function add_mapping_values_sorted () {
-
-# Create "here-document" to prevent a dependent file.
-cat >./$d.mapvalues.py <<EOL
-#!/usr/bin/env python
-
-import pandas as pd
-import numpy as np
-from sys import argv
-
-# infile arg used to make compatible for both sorted and organized tables
-script, infile, inquality = argv
-
-quality = pd.read_csv(inquality, sep='\t')
-mytable = pd.read_csv(infile, sep='\t')
-
-# set index to "reference_pos" so generic index does not transpose
-mytable = mytable.set_index('reference_pos')
-mytable = mytable.transpose()
-
-# write to csv to import back with generic index again
-# seems like a hack that can be done better
-mytable.to_csv("$d.transposed_table.txt", sep="\t", index_label='reference_pos')
-
-# can't merge on index but this newly imported transpose is formated correctly
-mytable = pd.read_csv('$d.transposed_table.txt', sep='\t')
-mytable = mytable.merge(quality, on='reference_pos', how='inner')
-
-# set index to "reference_pos" so generic index does not transpose 
-mytable = mytable.set_index('reference_pos')
-mytable = mytable.transpose()
-# since "reference_pos" was set as index it needs to be explicitly written into csv
-mytable.to_csv("$d.finished_table.txt", sep="\t", index_label='reference_pos')
-
-EOL
-
-chmod 755 ./$d.mapvalues.py
-
-}
-
-add_mapping_values_sorted
-sleep 5
-pwd
-pause
-
-./$d.mapvalues.py ${d}.table.txt quality.txt
-mv $d.finished_table.txt ${d}.table.txt
-pause
-
-./$d.mapvalues.py ${d}-organized-table.txt quality.txt
-mv $d.finished_table.txt ${d}-organized-table.txt
-rm quality.txt
+puase
 
 # When multiple tables are being done decrease cpus being used
 if [[ -z $gbk_file ]]; then
@@ -1649,6 +1575,9 @@ function all_vcfs () {
 #Arguments
     #filterfile directory
     #current group being worked on
+
+echo "filterdir $filterdir"
+echo "d: $d"
 
 script2_all_intergrate.py ${filterdir} ${d}
 pause
