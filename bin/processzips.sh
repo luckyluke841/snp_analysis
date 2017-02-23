@@ -555,7 +555,7 @@ cp ${n}.pilon.vcf ./pilon
 echo "***Deleting Files"
 rm $n.sam
 rm $n.raw.bam
-$n.all.bam
+rm $n.all.bam
 #rm $n.dup.bam
 #rm $n.dup.bam.bai
 rm $n.sorted.bam
