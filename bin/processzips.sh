@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 #  processzips.sh
 
@@ -444,7 +444,6 @@ echo "Forward Reads:  $forReads"
 
 revReads=`ls | grep _R2`
 echo "Reverse Reads:  $revReads"
-pause
 
 #   retrieves reference name and name from sorted BAM file name
 r=`echo $ref | sed 's/\..*//'`
@@ -452,7 +451,7 @@ n=`echo $revReads | sed 's/_.*//' | sed 's/\..*//'`
 
 echo "***Reference naming convention:  $r"
 echo "***Isolate naming convention:  $n"
-pause
+
 ${SAMTOOLS} faidx $ref
 java -Xmx4g -jar ${PICARD} CreateSequenceDictionary REFERENCE=${ref} OUTPUT=${r}.dict
 
@@ -477,7 +476,7 @@ ${BWA} index $ref
 #adding -B 8 will require reads to have few mismatches to align to reference.  -B 1 will allow more mismatch per read.
 echo "***Making Sam file"
 ${BWA} mem -M -t 16 -R @RG"\t"ID:"$n""\t"PL:ILLUMINA"\t"PU:"$n"_RG1_UNIT1"\t"LB:"$n"_LIB1"\t"SM:"$n" $ref $forReads $revReads > $n.sam
-pause
+
 # -b	 Output in the BAM format.
 # -h	 Include the header in the output.
 #-F INT	 Skip alignments with bits present in INT [0]
@@ -491,7 +490,7 @@ ${SAMTOOLS} view -bh -T $ref $n.sam > $n.all.bam
 ${SAMTOOLS} view -h -f4 $n.all.bam > $n.unmappedReads.sam
 #Create fastqs of unmapped reads to assemble
 java -Xmx4g -jar ${PICARD} SamToFastq INPUT=$n.unmappedReads.sam FASTQ=${n}-unmapped_R1.fastq SECOND_END_FASTQ=${n}-unmapped_R2.fastq
-pause
+
 rm $n.unmappedReads.sam
 ${ABYSS} name=${n}_abyss k=64 in="${n}-unmapped_R1.fastq ${n}-unmapped_R2.fastq"
 
@@ -510,19 +509,19 @@ ${SAMTOOLS} sort $n.all.bam -o $n.sorted.bam
 echo "***Indexing Bam"
 ${SAMTOOLS} index $n.sorted.bam
 # Remove duplicate molecules
-paue
+
 echo "***Marking Duplicates"
 java -Xmx4g -jar  ${PICARD} MarkDuplicates INPUT=$n.sorted.bam OUTPUT=$n.dup.bam METRICS_FILE=$n.FilteredReads.xls ASSUME_SORTED=true REMOVE_DUPLICATES=true
 
 echo "***Index $n.dup.bam"
 ${SAMTOOLS} index $n.dup.bam
-pause
+
 # Run Pilon
 mkdir pilon
 java -Xmx16G -jar ${PILON} --genome $ref --bam ${n}.dup.bam --output ./pilon/${n}-pilon --vcf --vcfqe --tracks --iupac
 awk ' $5 != "." || $7 != "PASS" {print $0}' ./pilon/${n}-pilon.vcf | awk '$7 != "LowCov" {print $0}' | awk '$5 != "<DUP>" {print $0}' | awk '$8 !~ /SVTYPE=INS/ {print $0}' | awk '$8 !~ /SVTYPE=DEL/ {print $0}' | awk '$8 !~ /SVTYPE=DUP/ {print $0}' > ${n}.pilon-cut.vcf
 cp ${n}.pilon.vcf ./pilon
-pause
+
 ##########
 
 #if [ $gff_file ]; then
