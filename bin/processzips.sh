@@ -480,8 +480,8 @@ ${BWA} mem -M -t 16 -R @RG"\t"ID:"$n""\t"PL:ILLUMINA"\t"PU:"$n"_RG1_UNIT1"\t"LB:
 # -b	 Output in the BAM format.
 # -h	 Include the header in the output.
 #-F INT	 Skip alignments with bits present in INT [0]
-echo "***Making Bam file"
-${SAMTOOLS} view -bh -F4 -T $ref $n.sam > $n.raw.bam
+#echo "***Making Bam file"
+#${SAMTOOLS} view -bh -F4 -T $ref $n.sam > $n.raw.bam
 
 if [ $sample_type == secd ]; then
         echo "secd, not assembling unmapped reads"
@@ -493,7 +493,7 @@ ${SAMTOOLS} view -bh -T $ref $n.sam > $n.all.bam
 ${SAMTOOLS} view -h -f4 $n.all.bam > $n.unmappedReads.sam
 #Create fastqs of unmapped reads to assemble
 java -Xmx4g -jar ${PICARD} SamToFastq INPUT=$n.unmappedReads.sam FASTQ=${n}-unmapped_R1.fastq SECOND_END_FASTQ=${n}-unmapped_R2.fastq
-rm $n.all.bam
+
 rm $n.unmappedReads.sam
 ${ABYSS} name=${n}_abyss k=64 in="${n}-unmapped_R1.fastq ${n}-unmapped_R2.fastq"
 
@@ -509,7 +509,7 @@ rm *abyss*
 fi
 
 echo "***Sorting Bam"
-${SAMTOOLS} sort $n.raw.bam -o $n.sorted.bam
+${SAMTOOLS} sort $n.all.bam -o $n.sorted.bam
 echo "***Indexing Bam"
 ${SAMTOOLS} index $n.sorted.bam
 # Remove duplicate molecules
