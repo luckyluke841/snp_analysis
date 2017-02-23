@@ -483,9 +483,6 @@ ${BWA} mem -M -t 16 -R @RG"\t"ID:"$n""\t"PL:ILLUMINA"\t"PU:"$n"_RG1_UNIT1"\t"LB:
 #echo "***Making Bam file"
 #${SAMTOOLS} view -bh -F4 -T $ref $n.sam > $n.raw.bam
 
-if [ $sample_type == secd ]; then
-        echo "secd, not assembling unmapped reads"
-else
 ####### unmapped reads #######
 #Bam with mapped and unmapped reads
 ${SAMTOOLS} view -bh -T $ref $n.sam > $n.all.bam
