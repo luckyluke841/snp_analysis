@@ -503,7 +503,6 @@ mv ${n}_abyss-stats ../unmappedReads
 mv *coverage* ../unmappedReads
 rm *abyss*
 ######################
-fi
 
 echo "***Sorting Bam"
 ${SAMTOOLS} sort $n.all.bam -o $n.sorted.bam
