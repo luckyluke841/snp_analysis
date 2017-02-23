@@ -528,33 +528,33 @@ cp ${n}.pilon.vcf ./pilon
 
 ##########
 
-if [ $gff_file ]; then
-    echo "Annotating $n.pilon.vcf"
-    awk '$3 == "gene" {print $0}' $gff_file | awk '{print $4, $5, $9}' > list.genes
-
-    while read l; do
-    echo $l | awk '{for(i=$1;i<=$2;i++) print i, $3}'
-    done < list.genes | sed -e 's/\([0-9]*\).*;\(Name=.*\);gbkey.*\(gene_biotype=.*\);\(locus_tag=.*\)/\1   \2;\3;\4/' > expand.gene
-
-    #Split header lines from position calls
-    grep "#" $n.pilon.vcf > header
-    grep -v "#" $n.pilon.vcf > body
-
-    #http://unix.stackexchange.com/questions/113898/how-to-merge-two-files-based-on-the-matching-of-two-columns
-
-    awk 'BEGIN{OFS="\t"}NR==FNR {h[$1] = $2; next} {print $1,$2,h[$2],$4,$5,$6,$7,$8,$9,$10}' expand.gene body | awk 'BEGIN { FS = OFS = "\t" } { for(i=1; i<=NF; i++) if($i ~ /^ *$/) $i = "." }; 1' > body2
-
-    cat header body2 > ${n}.pilon-annotated.vcf
-
-    rm body
-    rm body2
-    rm header
-    rm expand.gene
-    rm list.genes
-
-else
-    echo "gff file not given"
-fi
+#if [ $gff_file ]; then
+#    echo "Annotating $n.pilon.vcf"
+#    awk '$3 == "gene" {print $0}' $gff_file | awk '{print $4, $5, $9}' > list.genes
+#
+#    while read l; do
+#    echo $l | awk '{for(i=$1;i<=$2;i++) print i, $3}'
+#    done < list.genes | sed -e 's/\([0-9]*\).*;\(Name=.*\);gbkey.*\(gene_biotype=.*\);\(locus_tag=.*\)/\1   \2;\3;\4/' > expand.gene
+#
+#    #Split header lines from position calls
+#    grep "#" $n.pilon.vcf > header
+#    grep -v "#" $n.pilon.vcf > body
+#
+#    #http://unix.stackexchange.com/questions/113898/how-to-merge-two-files-based-on-the-matching-of-two-columns
+#
+#    awk 'BEGIN{OFS="\t"}NR==FNR {h[$1] = $2; next} {print $1,$2,h[$2],$4,$5,$6,$7,$8,$9,$10}' expand.gene body | awk 'BEGIN { FS = OFS = "\t" } { for(i=1; i<=NF; i++) if($i ~ /^ *$/) $i = "." }; 1' > body2
+#
+#    cat header body2 > ${n}.pilon-annotated.vcf
+#
+#    rm body
+#    rm body2
+#    rm header
+#    rm expand.gene
+#    rm list.genes
+#
+#else
+#    echo "gff file not given"
+#fi
 
 echo "***Deleting Files"
 rm $n.sam
@@ -581,37 +581,37 @@ rm $n.hapreadyOnlySNPs.vcf
 # The next 5 steps collect metrics
 ###################################
 
-#Quality Score Distribution
-echo "***Quality Score Distribution"
-java -Xmx4g -jar ${PICARD} QualityScoreDistribution REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam CHART_OUTPUT=$n.QualityScorceDistribution.pdf OUTPUT=$n.QualityScoreDistribution ASSUME_SORTED=true
-
-#Mean Quality by Cycle
-echo "***Mean Quality by Cycle"
-java -Xmx4g -jar ${PICARD} CollectMultipleMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.Quality_by_cycle PROGRAM=MeanQualityByCycle ASSUME_SORTED=true
-
-#Collect Alignment Summary Metrics
-echo "***Collect Alignment Summary Metrics"
-java -Xmx4g -jar ${PICARD} CollectAlignmentSummaryMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.AlignmentMetrics ASSUME_SORTED=true
-
-#Collect GC Bias Error
-echo "***Collect GC Bias Error"
-java -Xmx4g -jar ${PICARD} CollectGcBiasMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.CollectGcBiasMetrics CHART_OUTPUT=$n.GC.PDF ASSUME_SORTED=true
-
-#Collect Insert Size Metrics
-echo "***Collect Insert Size Metrics"
-java -Xmx4g -jar ${PICARD} CollectInsertSizeMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam HISTOGRAM_FILE=$n.InsertSize.pdf OUTPUT=$n.CollectInsertSizeMetrics ASSUME_SORTED=true
-
-cat $n.AlignmentMetrics >> $n.Metrics_summary.xls
-cat $n.CollectInsertSizeMetrics >> $n.Metrics_summary.xls
-
-echo "***Organizing files"
-
-#Move to qualityvalues subfolder
-mkdir qualityvalues
-mv $n.GC.PDF qualityvalues/
-mv $n.QualityScorceDistribution.pdf qualityvalues/
-mv $n.InsertSize.pdf qualityvalues/
-mv $n.Quality_by_cycle*.pdf qualityvalues/
+##Quality Score Distribution
+#echo "***Quality Score Distribution"
+#java -Xmx4g -jar ${PICARD} QualityScoreDistribution REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam CHART_OUTPUT=$n.QualityScorceDistribution.pdf OUTPUT=$n.QualityScoreDistribution ASSUME_SORTED=true
+#
+##Mean Quality by Cycle
+#echo "***Mean Quality by Cycle"
+#java -Xmx4g -jar ${PICARD} CollectMultipleMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.Quality_by_cycle PROGRAM=MeanQualityByCycle ASSUME_SORTED=true
+#
+##Collect Alignment Summary Metrics
+#echo "***Collect Alignment Summary Metrics"
+#java -Xmx4g -jar ${PICARD} CollectAlignmentSummaryMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.AlignmentMetrics ASSUME_SORTED=true
+#
+##Collect GC Bias Error
+#echo "***Collect GC Bias Error"
+#java -Xmx4g -jar ${PICARD} CollectGcBiasMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.CollectGcBiasMetrics CHART_OUTPUT=$n.GC.PDF ASSUME_SORTED=true
+#
+##Collect Insert Size Metrics
+#echo "***Collect Insert Size Metrics"
+#java -Xmx4g -jar ${PICARD} CollectInsertSizeMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam HISTOGRAM_FILE=$n.InsertSize.pdf OUTPUT=$n.CollectInsertSizeMetrics ASSUME_SORTED=true
+#
+#cat $n.AlignmentMetrics >> $n.Metrics_summary.xls
+#cat $n.CollectInsertSizeMetrics >> $n.Metrics_summary.xls
+#
+#echo "***Organizing files"
+#
+##Move to qualityvalues subfolder
+#mkdir qualityvalues
+#mv $n.GC.PDF qualityvalues/
+#mv $n.QualityScorceDistribution.pdf qualityvalues/
+#mv $n.InsertSize.pdf qualityvalues/
+#mv $n.Quality_by_cycle*.pdf qualityvalues/
 
 #Remove files
 rm $n.CollectInsertSizeMetrics
