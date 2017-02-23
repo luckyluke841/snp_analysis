@@ -556,10 +556,10 @@ echo "***Deleting Files"
 rm $n.sam
 rm $n.raw.bam
 $n.all.bam
-rm $n.dup.bam
-rm $n.dup.bam.bai
-#rm $n.sorted.bam
-#rm $n.sorted.bam.bai
+#rm $n.dup.bam
+#rm $n.dup.bam.bai
+rm $n.sorted.bam
+rm $n.sorted.bam.bai
 rm $forReads
 rm $revReads
 rm igv.log
