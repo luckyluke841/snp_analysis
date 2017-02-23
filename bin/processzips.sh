@@ -520,106 +520,16 @@ java -Xmx4g -jar  ${PICARD} MarkDuplicates INPUT=$n.sorted.bam OUTPUT=$n.dup.bam
 echo "***Index $n.dup.bam"
 ${SAMTOOLS} index $n.dup.bam
 
-# Creates file that is used in the next step
-# locally realign reads such that the number of mismatching bases is minimized across all the reads
-# http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_indels_RealignerTargetCreator.html
-echo "***Realigner Target Creator"
-java -Xmx4g -jar ${GATK} -T RealignerTargetCreator -I $n.dup.bam -R $ref -o $n.forIndelRealigner.intervals
-
-if [ ! -e $n.forIndelRealigner.intervals ]; then
-	java -Xmx4g -jar ${GATK} -T RealignerTargetCreator --fix_misencoded_quality_scores -I $n.dup.bam -R $ref -o $n.forIndelRealigner.intervals
-fi
-
-# Uses the RealignerTargetCreator output file to improve BAM alignment
-# http://www.broadinstitute.org/gatk/guide/tagged?tag=indelrealigner
-echo "***Target Intervals"
-java -Xmx4g -jar ${GATK} -T IndelRealigner -I $n.dup.bam -R $ref -targetIntervals $n.forIndelRealigner.intervals -o $n.realignedBam.bam
-
-if [ ! -e $n.realignedBam.bam ]; then
-	echo "$n RealignedBam.bam failed to make.  Possible cause: Error in quality scores.  Try --fix_misencoded_quality_scores"
-	echo "$n RealignedBam.bam failed to make.  Possible cause: Error in quality scores.  Try --fix_misencoded_quality_scores" > $n.errorReport
-	#cat $n.errorReport | mutt -s "$n Alignment failure" -- tod.p.stuber@usda.gov
-	java -Xmx4g -jar ${GATK} -T IndelRealigner --fix_misencoded_quality_scores -I $n.dup.bam -R $ref -targetIntervals $n.forIndelRealigner.intervals -o $n.realignedBam.bam
-fi
-
-# Uses a .vcf file which contains SNP calls of known high value to recalibrates base quality scores
-# http://www.broadinstitute.org/gatk/guide/tagged?tag=baserecalibrator
-echo "***Base Recalibrator"
-java -Xmx4g -jar ${GATK} -T BaseRecalibrator -I $n.realignedBam.bam -R $ref -knownSites ${hqs} -o $n.recal_data.grp
-
-if [ ! -e $n.recal_data.grp ]; then
-	java -Xmx4g -jar ${GATK} -T BaseRecalibrator --fix_misencoded_quality_scores -I $n.realignedBam.bam -R $ref -knownSites ${hqs} -o $n.recal_data.grp
-fi
-
-# Make the finished "ready" .bam file
-echo "***Print Reads"
-java -Xmx4g -jar ${GATK} -T PrintReads -R $ref -I $n.realignedBam.bam -BQSR $n.recal_data.grp -o $n.preready-mem.bam
-
-if [ ! -e $n.preready-mem.bam ]; then
-	java -Xmx4g -jar ${GATK} -T PrintReads --fix_misencoded_quality_scores -R $ref -I $n.realignedBam.bam -BQSR $n.recal_data.grp -o $n.preready-mem.bam
-fi
-
-java -jar ${GATK} -T ClipReads -R $ref -I $n.preready-mem.bam -o $n.ready-mem.bam -filterNoBases -dcov 10
-${SAMTOOLS} index $n.ready-mem.bam
-
-#Collect Depth of coverage info
-echo "***Collect Depth of Coverage"
-java -jar ${GATK} -T DepthOfCoverage -R $ref -I $n.preready-mem.bam -o $n.coverage -omitIntervals --omitLocusTable --omitPerSampleStats -nt 8
-
-#########################
-
-if [ $sample_type == secd ]; then
-	echo "secd, not using haplotypecaller"
-else
-# http://www.broadinstitute.org/gatk/guide/tagged?tag=unifiedgenotyper
-# In group tb4b position 3336835 was not being found in some isolates.  Adding this advance flag allowed these positions to be found.
-# ploidy 2 is default
-echo "***HaplotypeCaller, aka calling SNPs"
-#-allowNonUniqueKmersInRef
-java -Xmx4g -jar ${GATK} -R $ref -T HaplotypeCaller -I $n.ready-mem.bam -o $n.hapreadyAll.vcf -bamout $n.bamout.bam -dontUseSoftClippedBases -allowNonUniqueKmersInRef
-java -Xmx4g -jar ${IGVTOOLS} index $n.hapreadyAll.vcf
-
-echo "******Awk VCF leaving just SNPs******"
-awk '/#/ || $4 ~ /^[ATGC]$/ && $5 ~ /^[ATGC]$/ {print $0}' $n.hapreadyAll.vcf > $n.hapreadyOnlySNPs.vcf
-
-#Split header lines from position calls
-grep "#" $n.hapreadyOnlySNPs.vcf > $n.header
-grep -v "#" $n.hapreadyOnlySNPs.vcf > $n.body
-
-#SNP positons that will be used
-awk '{print $1 "%" $2}' $n.body > $n.calledSNPpositions
-
-#Zero coverage positions
-awk 'BEGIN {FS="[:\t]"} $3 == 0 {print $1 "%" $2}' $n.coverage > $n.zeroCoveragePositions
-#Remove zero coverage positions that will be are in $n.hapreadyOnlySNPs.vcf
-cat $n.calledSNPpositions $n.zeroCoveragePositions | sort | uniq -d > $n.duplicates
-cat $n.zeroCoveragePositions $n.duplicates | sort | uniq -u > $n.keepTheseZeroCovPositions
-zeroposition=`grep -c ".*" $n.keepTheseZeroCovPositions`
-refsize=`wc -m $ref | awk '{print $1}'`
-
-#Fromat $n.keepTheseZeroCovPositions to VCF
-sed 's/%/ /' $n.keepTheseZeroCovPositions | awk 'BEGIN{OFS="\t"}{print $1, $2, ".", ".", ".", ".", ".", ".", "GT", "./."}' > $n.vcfFormated
-cat $n.body $n.vcfFormated | awk 'BEGIN{OFS="\t"}{if ($4 == ".") print $1, $2, $3, "N", $5, $6, $7, $8, $9, $10; else print $0}' > $n.SNPsMapzeroNoHeader.vcf
-cat $n.header $n.SNPsMapzeroNoHeader.vcf > $n.unsortSNPsZeroCoverage.vcf
-java -Xmx4g -jar ${IGVTOOLS} sort $n.unsortSNPsZeroCoverage.vcf $n.SNPsZeroCoverage.vcf
-java -Xmx4g -jar ${IGVTOOLS} index $n.SNPsZeroCoverage.vcf
-
-fi
-
-# Emit all sites to VCF, not just the SNPs and indels.  This allows making a UnifiedGenotyper VCF similar to what was used before using the Haplotypecaller.
-java -Xmx4g -jar ${GATK} -R $ref -T UnifiedGenotyper -out_mode EMIT_ALL_SITES -I ${n}.ready-mem.bam -o ${n}.allsites.vcf -nt 8
-
-# This removes all positions same as the reference.  These positions are found by removing rows were column (field) 8 begins with AN=2.  This decreases the size of the VCF considerably.  The final VCF contains all SNP, indel or zero mapped/coverage positions
-awk ' $0 ~ /#/ || $8 !~ /^AN=2;/ {print $0}' ${n}.allsites.vcf > $n.ready-mem.vcf
-java -Xmx4g -jar ${IGVTOOLS} index $n.ready-mem.vcf
-
 # Run Pilon
 mkdir pilon
-java -Xmx16G -jar ${PILON} --genome $ref --bam ${n}.ready-mem.bam --output ./pilon/${n}-pilon --vcf --vcfqe --tracks --iupac
-awk ' $5 != "." || $7 != "PASS" {print $0}' ./pilon/${n}-pilon.vcf > ${n}-pilon-calls.vcf
+java -Xmx16G -jar ${PILON} --genome $ref --bam ${n}.dup.bam --output ./pilon/${n}-pilon --vcf --vcfqe --tracks --iupac
+awk ' $5 != "." || $7 != "PASS" {print $0}' ./pilon/${n}-pilon.vcf | awk '$7 != "LowCov" {print $0}' | awk '$5 != "<DUP>" {print $0}' | awk '$8 !~ /SVTYPE=INS/ {print $0}' | awk '$8 !~ /SVTYPE=DEL/ {print $0}' | awk '$8 !~ /SVTYPE=DUP/ {print $0}' > ${n}.pilon.vcf
+cp ${n}.pilon.vcf ./pilon
+
+##########
 
 if [ $gff_file ]; then
-    echo "Annotating $n.SNPsZeroCoverage.vcf"
+    echo "Annotating $n.pilon.vcf"
     awk '$3 == "gene" {print $0}' $gff_file | awk '{print $4, $5, $9}' > list.genes
 
     while read l; do
@@ -627,14 +537,14 @@ if [ $gff_file ]; then
     done < list.genes | sed -e 's/\([0-9]*\).*;\(Name=.*\);gbkey.*\(gene_biotype=.*\);\(locus_tag=.*\)/\1   \2;\3;\4/' > expand.gene
 
     #Split header lines from position calls
-    grep "#" $n.SNPsZeroCoverage.vcf > header
-    grep -v "#" $n.SNPsZeroCoverage.vcf > body
+    grep "#" $n.pilon.vcf > header
+    grep -v "#" $n.pilon.vcf > body
 
     #http://unix.stackexchange.com/questions/113898/how-to-merge-two-files-based-on-the-matching-of-two-columns
 
     awk 'BEGIN{OFS="\t"}NR==FNR {h[$1] = $2; next} {print $1,$2,h[$2],$4,$5,$6,$7,$8,$9,$10}' expand.gene body | awk 'BEGIN { FS = OFS = "\t" } { for(i=1; i<=NF; i++) if($i ~ /^ *$/) $i = "." }; 1' > body2
 
-    cat header body2 > ${n}.SNPsZeroCoverage-annotated.vcf
+    cat header body2 > ${n}.pilon-annotated.vcf
 
     rm body
     rm body2
@@ -647,22 +557,15 @@ else
 fi
 
 echo "***Deleting Files"
-rm $n.unsortSNPsZeroCoverage.vcf
 rm $n.sam
 rm $n.raw.bam
 rm $n.dup.bam
 rm $n.dup.bam.bai
 rm $n.sorted.bam
 rm $n.sorted.bam.bai
-rm $n.realignedBam.bam
-rm $n.realignedBam.bai
 rm $forReads
 rm $revReads
 rm igv.log
-rm ${n}.allsites.vcf
-rm ${n}.allsites.vcf.idx
-rm ${n}.forIndelRealigner.intervals
-rm ${n}.recal_data.grp
 
 rm $n.SNPsMapzeroNoHeader.vcf
 rm $n.vcfFormated
@@ -680,23 +583,23 @@ rm $n.hapreadyOnlySNPs.vcf
 
 #Quality Score Distribution
 echo "***Quality Score Distribution"
-java -Xmx4g -jar ${PICARD} QualityScoreDistribution REFERENCE_SEQUENCE=$ref INPUT=$n.ready-mem.bam CHART_OUTPUT=$n.QualityScorceDistribution.pdf OUTPUT=$n.QualityScoreDistribution ASSUME_SORTED=true
+java -Xmx4g -jar ${PICARD} QualityScoreDistribution REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam CHART_OUTPUT=$n.QualityScorceDistribution.pdf OUTPUT=$n.QualityScoreDistribution ASSUME_SORTED=true
 
 #Mean Quality by Cycle
 echo "***Mean Quality by Cycle"
-java -Xmx4g -jar ${PICARD} CollectMultipleMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.ready-mem.bam OUTPUT=$n.Quality_by_cycle PROGRAM=MeanQualityByCycle ASSUME_SORTED=true
+java -Xmx4g -jar ${PICARD} CollectMultipleMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.Quality_by_cycle PROGRAM=MeanQualityByCycle ASSUME_SORTED=true
 
 #Collect Alignment Summary Metrics
 echo "***Collect Alignment Summary Metrics"
-java -Xmx4g -jar ${PICARD} CollectAlignmentSummaryMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.ready-mem.bam OUTPUT=$n.AlignmentMetrics ASSUME_SORTED=true
+java -Xmx4g -jar ${PICARD} CollectAlignmentSummaryMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.AlignmentMetrics ASSUME_SORTED=true
 
 #Collect GC Bias Error
 echo "***Collect GC Bias Error"
-java -Xmx4g -jar ${PICARD} CollectGcBiasMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.ready-mem.bam OUTPUT=$n.CollectGcBiasMetrics CHART_OUTPUT=$n.GC.PDF ASSUME_SORTED=true
+java -Xmx4g -jar ${PICARD} CollectGcBiasMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam OUTPUT=$n.CollectGcBiasMetrics CHART_OUTPUT=$n.GC.PDF ASSUME_SORTED=true
 
 #Collect Insert Size Metrics
 echo "***Collect Insert Size Metrics"
-java -Xmx4g -jar ${PICARD} CollectInsertSizeMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.ready-mem.bam HISTOGRAM_FILE=$n.InsertSize.pdf OUTPUT=$n.CollectInsertSizeMetrics ASSUME_SORTED=true
+java -Xmx4g -jar ${PICARD} CollectInsertSizeMetrics REFERENCE_SEQUENCE=$ref INPUT=$n.dup.bam HISTOGRAM_FILE=$n.InsertSize.pdf OUTPUT=$n.CollectInsertSizeMetrics ASSUME_SORTED=true
 
 cat $n.AlignmentMetrics >> $n.Metrics_summary.xls
 cat $n.CollectInsertSizeMetrics >> $n.Metrics_summary.xls
@@ -746,7 +649,7 @@ readcount=`sed -n 8p $n.FilteredReads.xls | awk '{print $3}'`
 echo "" >> $n.stats2.txt
 
 echo "***Bamtools running"
-aveCoverage=`${BAMTOOLS} coverage -in $n.ready-mem.bam | awk '{sum+=$3} END { print sum/NR"X"}'`
+aveCoverage=`${BAMTOOLS} coverage -in $n.dup.bam | awk '{sum+=$3} END { print sum/NR"X"}'`
 aveCoveragenoX=`echo $aveCoverage | sed 's/X//'`
 echo "Average depth of coverage: $aveCoverage" >> $n.stats2.txt
 
@@ -772,12 +675,12 @@ average_read_length=`awk 'BEGIN {OFS="\t"} { print $16 }' $n.AlignmentMetrics | 
 echo "" >> $n.stats.txt
 
 #  Add SNP call numbers to stats.txt file
-echo "SNP and zero coverage positions in $n.SNPsZeroCoverage.vcf:" >> $n.stats.txt
-egrep -v "#" $n.SNPsZeroCoverage.vcf | grep -c ".*" >> $n.stats.txt
+echo "SNP and zero coverage positions in $n.pilon.vcf:" >> $n.stats.txt
+egrep -v "#" $n.pilon.vcf | grep -c ".*" >> $n.stats.txt
 
 echo "SNPs of AC2 and QUAL > 300:" >> $n.stats.txt
-egrep -v "#" $n.SNPsZeroCoverage.vcf | egrep "AC=2" | awk '$6 > 300' | grep -c ".*" >> $n.stats.txt
-quality_snps=`egrep -v "#" $n.SNPsZeroCoverage.vcf | egrep "AC=2" | awk '$6 > 300' | grep -c ".*"`
+egrep -v "#" $n.pilon.vcf | egrep "AC=2" | awk '$6 > 300' | grep -c ".*" >> $n.stats.txt
+quality_snps=`egrep -v "#" $n.pilon.vcf | egrep "AC=2" | awk '$6 > 300' | grep -c ".*"`
 
 #  Show Mean Coverage at Terminal and coverageReport
 echo "Mean Coverage"
@@ -800,8 +703,8 @@ ln qualityvalues/$n.stats.txt ./stats-$n.txt
 
 cp $0 ./
 
-echo "***Sending files to the Network"
-cp -r ${startingdir} ${bioinfo}
+#echo "***Sending files to the Network"
+#cp -r ${startingdir} ${bioinfo}
 
 printf "%s\t%s\t%s\t%s\t%'d\t%'d\t%s\t%d\t%s\t%s\t%s\t%d\t%d\n" $sample_type $n $read1_size $read2_size $total_reads_pairs $unpaired_reads $duplicate_reads $average_read_length $r $aveCoveragenoX $percGenomeCoverage $unmapped_contig_count $quality_snps >> /scratch/report/pre_stat_table.txt
 printf "%s\t%s\t%s\t%s\t%'d\t%'d\t%s\t%d\t%s\t%s\t%s\t%d\t%d\n" $sample_type $n $read1_size $read2_size $total_reads_pairs $unpaired_reads $duplicate_reads $average_read_length $r $aveCoverage $percGenomeCoverage $unmapped_contig_count $quality_snps >> /scratch/report/stat_table_cumulative.txt
@@ -1453,15 +1356,15 @@ column -t /scratch/report/stat_table.txt > /scratch/report/stat_table.temp; mv /
 enscript /scratch/report/stat_table.txt -B -j -r -f "Courier7" -o - | ps2pdf - /scratch/report/stat_table.pdf
 
 if [[ $email -eq 1 ]]; then
-	email_list="tod.p.stuber@aphis.usda.gov Jessica.A.Hicks@aphis.usda.gov suelee.robbe-austerman@aphis.usda.gov patrick.m.camp@aphis.usda.gov David.T.Farrell@aphis.usda.gov Christine.R.Quance@aphis.usda.gov Robin.L.Swanson@aphis.usda.gov"
+	email_list="tod.p.stuber@usda.gov"
 elif [[ $email == "all" ]]; then
-    email_list="tod.p.stuber@aphis.usda.gov Jessica.A.Hicks@aphis.usda.gov suelee.robbe-austerman@aphis.usda.gov patrick.m.camp@aphis.usda.gov David.T.Farrell@aphis.usda.gov Christine.R.Quance@aphis.usda.gov Robin.L.Swanson@aphis.usda.gov"
+    email_list="tod.p.stuber@usda.gov"
 elif [[ $email == "tod" ]]; then
     email_list="tod.p.stuber@usda.gov"
 elif [[ $email == "jess" ]]; then
-    email_list="Jessica.A.Hicks@aphis.usda.gov"
+    email_list="tod.p.stuber@usda.gov"
 elif [[ $email == "suelee" ]]; then
-    email_list="tod.p.stuber@usda.gov Jessica.A.Hicks@aphis.usda.gov suelee.robbe-austerman@aphis.usda.gov"
+    email_list="tod.p.stuber@usda.gov"
 elif [[ $email == "off" ]]; then
     email_list="off"
     printf "\n\n\tNo email sent\n\n"
