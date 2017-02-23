@@ -523,7 +523,7 @@ ${SAMTOOLS} index $n.dup.bam
 # Run Pilon
 mkdir pilon
 java -Xmx16G -jar ${PILON} --genome $ref --bam ${n}.dup.bam --output ./pilon/${n}-pilon --vcf --vcfqe --tracks --iupac
-awk ' $5 != "." || $7 != "PASS" {print $0}' ./pilon/${n}-pilon.vcf | awk '$7 != "LowCov" {print $0}' | awk '$5 != "<DUP>" {print $0}' | awk '$8 !~ /SVTYPE=INS/ {print $0}' | awk '$8 !~ /SVTYPE=DEL/ {print $0}' | awk '$8 !~ /SVTYPE=DUP/ {print $0}' > ${n}.pilon.vcf
+awk ' $5 != "." || $7 != "PASS" {print $0}' ./pilon/${n}-pilon.vcf | awk '$7 != "LowCov" {print $0}' | awk '$5 != "<DUP>" {print $0}' | awk '$8 !~ /SVTYPE=INS/ {print $0}' | awk '$8 !~ /SVTYPE=DEL/ {print $0}' | awk '$8 !~ /SVTYPE=DUP/ {print $0}' > ${n}.pilon-cut.vcf
 cp ${n}.pilon.vcf ./pilon
 
 ##########
@@ -649,7 +649,7 @@ readcount=`sed -n 8p $n.FilteredReads.xls | awk '{print $3}'`
 echo "" >> $n.stats2.txt
 
 echo "***Bamtools running"
-aveCoverage=`${BAMTOOLS} coverage -in $n.dup.bam | awk '{sum+=$3} END { print sum/NR"X"}'`
+aveCoverage= `grep ^[0-9] ./pilon/${n}-pilonCoverage.wig | awk '{sum+=$1} END { print sum/NR"X"}'`
 aveCoveragenoX=`echo $aveCoverage | sed 's/X//'`
 echo "Average depth of coverage: $aveCoverage" >> $n.stats2.txt
 
