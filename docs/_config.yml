@@ -5,7 +5,7 @@ github_username: stuber
 
 # Build settings
 markdown: kramdown
-theme: minima
+theme: jekyll-theme-minimal
 
 #GitHub repo
 baseurl: /snp_analysis
